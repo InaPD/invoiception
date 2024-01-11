@@ -19,12 +19,10 @@ def extract_rows_by_code(input_file_path,codes,output_file, column_to_append):
 
         for i, row in enumerate(csv_reader):
             if i == 0:
-                # Skip the header row
+                # Skip the header
                 continue
 
             if  row[0] in codes:
-                #with open(output_file, 'a', newline='', encoding='utf-8') as csv_file:
-                #ova moze treba najgore da se donese vo funkcijata, probaj
                 #csv_writer = csv.writer(csv_file2, quotechar='"', quoting=csv.QUOTE_ALL)
                 csv_writer.writerow(row)
                 if column_to_append is not None:
