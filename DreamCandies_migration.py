@@ -5,9 +5,11 @@ import csv
 def extract_rows_by_code(input_file_path,codes,output_file, column_to_append):
 
     '''
-    This function iterates through the rows of the large input file and if it matches any codes from the codes list file, it writes the
-    entire row in the already created output file. The parameter columns_to_append keeps tha value of the column of the current file 
-    we want to append to a list, that we can use for the creation of the next file. If columns_to_append is None, it returns an empty list.
+    This function iterates through the rows of the large input file and if it matches any codes 
+    from the codes list file, it writes the entire row in the already created output file. The 
+    parameter columns_to_append keeps tha value of the column of the current file we want to 
+    append to a list, that we can use for the creation of the next file. If columns_to_append 
+    is None, it returns an empty list.
     
     '''
     extracted_rows = []
@@ -102,13 +104,12 @@ def create_csv_files(customer_file_path,invoice_file_path,invoice_item_file_path
     item_codes=extract_rows_by_code(invoice_item_file_path,invoice_codes,invoice_item_file_output_path,None)
 
 
-    
 
 if __name__=='__main__':
 
     # Paths of randomly generated input files
-    customer_file_path='Testing\Customer.csv'
-    invoice_file_path='Testing\Invoice.csv'
-    invoice_item_file_path='Testing\Invoice_item.csv'
-    customer_sample_file_path='Testing\Customer_sample.csv'
+    customer_file_path=r'Testing\Customer.csv'
+    invoice_file_path=r'Testing\Invoice.csv'
+    invoice_item_file_path=r'Testing\Invoice_item.csv'
+    customer_sample_file_path=r'Testing\Customer_sample_file.csv'
     create_csv_files(customer_file_path,invoice_file_path,invoice_item_file_path, customer_sample_file_path)
