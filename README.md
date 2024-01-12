@@ -8,7 +8,7 @@ The requirements of the assignment are:
 - From the **Invoice.csv** file we should extract the row that match the customer codes from the sample file and record them in an output file.
 - And from the **Invoice_item.csv** we should select the rows that match the invoice code field with the invoices previously selected for the invoice output file. 
 
-In order to perform this functionality, I first create the empty output files. Then I iterate through all 3 .csv files, match the designated column to the codes as needed and write down the rows in the output files. 
+In order to perform this functionality, I first create the empty output files. Then I iterate through all 3 .csv files, match the designated column to the codes as needed and write down the rows in the output files. The output files are created with the execution of dream_candies_migration.py.  
 
 For easier access to the 3 input files and the file with samples I import them from a config file, so if in the future the input files are changed they can easily be updated in one place only.
 
