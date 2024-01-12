@@ -5,7 +5,7 @@ import datetime
 
 
 def select_random_row(csv_file_path):
-    with open(csv_file_path, 'r', newline='', encoding='utf-8') as csv_file:
+    with open(csv_file_path, 'r', newline='', encoding='ascii') as csv_file:
         csv_reader = csv.reader(csv_file)
         rows = list(csv_reader)
 
@@ -21,7 +21,7 @@ def select_random_row(csv_file_path):
 
 def generate_customer_code():
 
-    row1=select_random_row('Customer.csv')
+    row1=select_random_row('Testing\Customer.csv')
     return row1[0]
 
 def generate_invoice_code():
@@ -34,13 +34,13 @@ def generate_date():
     return str(datetime.datetime.now())
 
 
-csv_file_path = 'Invoice.csv'
+csv_file_path = r'Testing\Invoice.csv'
 
 # Number of rows to generate
 num_rows = 2500
 
 
-with open(csv_file_path, 'w', newline='', encoding='utf-8') as csv_file:
+with open(csv_file_path, 'w', newline='', encoding='ascii') as csv_file:
 
     csv_writer = csv.writer(csv_file, quotechar='\"', quoting=csv.QUOTE_ALL)
 

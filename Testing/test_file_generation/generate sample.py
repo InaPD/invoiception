@@ -19,7 +19,7 @@ else:
     random_rows = random.sample(all_rows, num_random_rows)
 
 
-    with open('Customer_sample_file.csv', 'w', newline='') as csvfile:
+    with open('Testing\Customer_sample_file.csv', 'w', newline='', encoding='ascii') as csvfile:
         writer = csv.writer(csvfile,  quotechar='"', quoting=csv.QUOTE_ALL)
         writer.writerow([header[0]])  
         for row in random_rows:

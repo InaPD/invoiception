@@ -3,7 +3,7 @@ import random
 import string
 
 def select_random_row(csv_file_path):
-    with open(csv_file_path, 'r', newline='', encoding='utf-8') as csv_file:
+    with open(csv_file_path, 'r', newline='', encoding='ascii') as csv_file:
         csv_reader = csv.reader(csv_file)
         rows = list(csv_reader)
 
@@ -17,7 +17,7 @@ def select_random_row(csv_file_path):
             return None
 def generate_invoice_code():
 
-    row1=select_random_row('Invoice.csv')
+    row1=select_random_row('Testing\Invoice.csv')
     return row1[1]
 
 
@@ -32,15 +32,15 @@ def generate_amount():
 def generate_quantity():
     return random.randint(0,200)
 
-csv_file_path = 'Invoice_item.csv'
+csv_file_path = r'Testing\Invoice_item.csv'
 
 # Number of rows to generate
 num_rows = 15000
 
 
-with open(csv_file_path, 'w', newline='', encoding='utf-8') as csv_file:
+with open(csv_file_path, 'w', newline='', encoding='ascii') as csv_file:
 
-    csv_writer = csv.writer(csv_file, quotechar='\"', quoting=csv.QUOTE_ALL)
+    csv_writer = csv.writer(csv_file, quotechar='"', quoting=csv.QUOTE_ALL)
 
 
     csv_writer.writerow(["INVOICE_CODE", "ITEM_CODE", "AMOUNT","QUANTITY"])
