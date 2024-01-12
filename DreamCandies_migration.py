@@ -2,11 +2,11 @@ import csv
 
 
 
-def extract_rows_by_code(input_file_path,codes,output_file, column_to_append):
+def extract_rows_by_code(input_file_path, codes, output_file, column_to_append):
 
     '''
     This function iterates through the rows of the large input file and if it matches any codes 
-    from the codes list file, it writes the entire row in the already created output file. The 
+    from the codes list parameter, it writes the entire row in the already created output file. The 
     parameter columns_to_append keeps tha value of the column of the current file we want to 
     append to a list, that we can use for the creation of the next file. If columns_to_append 
     is None, it returns an empty list.
@@ -19,11 +19,8 @@ def extract_rows_by_code(input_file_path,codes,output_file, column_to_append):
         csv_reader = csv.reader(csv_file1)
         csv_writer = csv.writer(csv_file2, quotechar='"', quoting=csv.QUOTE_ALL)
 
-        for i, row in enumerate(csv_reader):
-            if i == 0:
-                # Skip the header
-                continue
-
+        for row in csv_reader:
+            # Header is skipped by default because it's not contained in the codes list
             if  row[0] in codes:
                 #csv_writer = csv.writer(csv_file2, quotechar='"', quoting=csv.QUOTE_ALL)
                 csv_writer.writerow(row)
@@ -66,7 +63,7 @@ def create_output_file(input_file):
 
 
         if header_row is not None:
-            csv_writer = csv.writer(csv_file1)
+            csv_writer = csv.writer(csv_file1, quotechar='"', quoting=csv.QUOTE_ALL)
             csv_writer.writerow(header_row)
     return output_file_name
 
