@@ -8,7 +8,7 @@ def extract_rows_by_code(input_file_path, codes, output_file, column_to_append):
     '''
     This function iterates through the rows of the large input file and if it matches any codes 
     from the codes list parameter, it writes the entire row in the already created output file. The 
-    parameter columns_to_append keeps tha value of the column of the current file we want to 
+    parameter columns_to_append keeps the value of the column of the current file we want to 
     append to a list, that we can use for the creation of the next file. If columns_to_append 
     is None, it returns an empty list.
     
