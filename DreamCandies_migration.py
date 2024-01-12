@@ -1,4 +1,5 @@
 import csv
+from config import CUSTOMER_FILE_PATH, INVOICE_FILE_PATH, INVOICE_ITEM_FILE_PATH, CUSTOMER_SAMPLE_FILE_PATH
 
 
 
@@ -20,7 +21,7 @@ def extract_rows_by_code(input_file_path, codes, output_file, column_to_append):
         csv_writer = csv.writer(csv_file2, quotechar='"', quoting=csv.QUOTE_ALL)
 
         for row in csv_reader:
-            # Header is skipped by default because it's not contained in the codes list
+            # Header is skipped by default because it's not contained in the codes 
             if  row[0] in codes:
                 #csv_writer = csv.writer(csv_file2, quotechar='"', quoting=csv.QUOTE_ALL)
                 csv_writer.writerow(row)
@@ -96,7 +97,7 @@ def create_csv_files(customer_file_path,invoice_file_path,invoice_item_file_path
 
     #Extract rows from the Invoice.csv that match the CUSTOMER_CODE
     invoice_codes=extract_rows_by_code(invoice_file_path,customer_codes,invoice_file_output_path, 2)
-
+  
     #Extract rows from the Invoice_Item.csv that match the INVOICE_CODE
     item_codes=extract_rows_by_code(invoice_item_file_path,invoice_codes,invoice_item_file_output_path,None)
 
@@ -104,9 +105,4 @@ def create_csv_files(customer_file_path,invoice_file_path,invoice_item_file_path
 
 if __name__=='__main__':
 
-    # Paths of randomly generated input files
-    customer_file_path=r'Testing\Customer.csv'
-    invoice_file_path=r'Testing\Invoice.csv'
-    invoice_item_file_path=r'Testing\Invoice_item.csv'
-    customer_sample_file_path=r'Testing\Customer_sample_file.csv'
-    create_csv_files(customer_file_path,invoice_file_path,invoice_item_file_path, customer_sample_file_path)
+    create_csv_files(CUSTOMER_FILE_PATH, INVOICE_FILE_PATH, INVOICE_ITEM_FILE_PATH, CUSTOMER_SAMPLE_FILE_PATH)
