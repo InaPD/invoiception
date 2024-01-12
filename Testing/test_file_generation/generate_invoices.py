@@ -31,7 +31,7 @@ def generate_amount():
     return random.uniform(5.0, 800.0)
 
 def generate_date():
-    return str(datetime.datetime.now())
+    return datetime.datetime.now().strftime("%d-%b-%Y")
 
 
 csv_file_path = r'Testing\Invoice.csv'
