@@ -10,3 +10,7 @@ The requirements of the assignment are:
 
 In order to perform this functionality, I first create the empty output files. Then I iterate through all 3 .csv files, match the designated column to the codes as needed and write down the rows in the output files. 
 
+For easier access to the 3 input files and the file wiith samples I import them from a config file, so if in the future the input files are chaged they can easily be updated in one place only.
+
+If you have any further questions about this assignment feel free to contact me at ipopducheva@gmail.com.
+
