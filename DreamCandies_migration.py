@@ -15,7 +15,7 @@ def extract_rows_by_code(input_file_path, codes, output_file, column_to_append):
     extracted_rows = []
 
 
-    with open(input_file_path, 'r', newline='', encoding='utf-8') as csv_file1, open(output_file, 'a', newline='', encoding='utf-8') as csv_file2:
+    with open(input_file_path, 'r', newline='', encoding='ascii') as csv_file1, open(output_file, 'a', newline='', encoding='ascii') as csv_file2:
         csv_reader = csv.reader(csv_file1)
         csv_writer = csv.writer(csv_file2, quotechar='"', quoting=csv.QUOTE_ALL)
 
@@ -39,7 +39,7 @@ def extract_codes_from_samples(csv_file):
     '''
 
     codes=[]
-    with open(csv_file, 'r', newline='', encoding='utf-8') as csv_file:
+    with open(csv_file, 'r', newline='', encoding='ascii') as csv_file:
         csv_reader = csv.reader(csv_file)
         
         for row in csv_reader:
@@ -56,7 +56,7 @@ def create_output_file(input_file):
     '''
         
     output_file_name=input_file[8:-4]+'_output.csv'
-    with open(output_file_name, 'w', newline='', encoding='utf-8') as csv_file1, open(input_file, 'r', newline='', encoding='utf-8') as csv_file2:
+    with open(output_file_name, 'w', newline='', encoding='ascii') as csv_file1, open(input_file, 'r', newline='', encoding='ascii') as csv_file2:
     
         csv_reader = csv.reader(csv_file2)
         header_row = next(csv_reader, None)
