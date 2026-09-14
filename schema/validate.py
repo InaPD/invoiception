@@ -103,7 +103,9 @@ def parse_and_validate(text: str) -> ValidationOutcome:
     except json.JSONDecodeError as exc:
         return ValidationOutcome(
             ok=False,
-            errors=[ValidationError("$", f"output is not valid JSON: {exc.msg} (line {exc.lineno})")],
+            errors=[
+                ValidationError("$", f"output is not valid JSON: {exc.msg} (line {exc.lineno})")
+            ],
         )
 
     return validate_record(parsed)

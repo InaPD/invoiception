@@ -119,6 +119,8 @@ class RegionReference:
 
 def _bbox(points: str) -> BBox:
     """Axis-aligned bounds of a PageXML `Coords` polygon."""
+    if not points.strip():
+        raise ValueError("empty Coords points attribute - the PageXML region has no geometry")
     pairs = [p.split(",") for p in points.split()]
     xs = [float(x) for x, _ in pairs]
     ys = [float(y) for _, y in pairs]
@@ -217,8 +219,10 @@ def to_reference(directory: Path, doc_id: str) -> RegionReference:
         if text:
             collected.setdefault(region.entity, []).append(text)
 
-    texts = {entity: " ".join(collected[entity]) if entity in collected else None
-             for entity in RVLCDIP_REGIONS}
+    texts = {
+        entity: " ".join(collected[entity]) if entity in collected else None
+        for entity in RVLCDIP_REGIONS
+    }
 
     confidences = [w.confidence for w in words]
     image = directory / f"{doc_id}.tif"
@@ -238,3 +242,42 @@ def document_ids(directory: Path) -> list[str]:
 def load_all(directory: Path) -> list[RegionReference]:
     """Reference records for every document in the directory."""
     return [to_reference(directory, doc_id) for doc_id in document_ids(directory)]
+
+
+@dataclass(frozen=True, slots=True)
+class OcrQuality:
+    """Corpus-level OCR quality. Stated explicitly because the README quotes these numbers.
+
+    `median` pools every word in the corpus rather than averaging per-document medians;
+    the two differ here (0.515 against 0.519) and an unstated choice between them is how a
+    reproducible number quietly becomes an unreproducible one.
+    """
+
+    documents: int
+    words: int
+    median: float
+    mean: float
+    zero_confidence_words: int
+
+
+def ocr_quality(directory: Path) -> OcrQuality:
+    """Pooled per-word OCR confidence across every document in an RVL-CDIP directory."""
+    doc_ids = document_ids(directory)
+    confidences = sorted(
+        w.confidence for doc_id in doc_ids for w in parse_ocr(directory / f"{doc_id}_ocr.xml")
+    )
+    if not confidences:
+        raise ValueError(f"no OCR words found under {directory}")
+    count = len(confidences)
+    median = (
+        confidences[count // 2]
+        if count % 2
+        else (confidences[count // 2 - 1] + confidences[count // 2]) / 2
+    )
+    return OcrQuality(
+        documents=len(doc_ids),
+        words=count,
+        median=median,
+        mean=sum(confidences) / count,
+        zero_confidence_words=sum(1 for c in confidences if c == 0.0),
+    )

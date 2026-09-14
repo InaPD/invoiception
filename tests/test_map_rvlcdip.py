@@ -116,6 +116,17 @@ class TestParsing:
         assert "Woking" not in [w.text for w in parse_ocr(path)]
 
 
+class TestMalformedInput:
+    def test_empty_coords_raise_a_clear_error(self, tmp_path):
+        from data.map_rvlcdip import parse_gt
+
+        xml = GT_XML.replace('points="0,0 200,0 200,100 0,100"', 'points=""')
+        path = tmp_path / "bad_gt.xml"
+        path.write_text(xml, encoding="utf-8")
+        with pytest.raises(ValueError, match="Coords"):
+            parse_gt(path)
+
+
 class TestRegionAssignment:
     def test_assigns_words_by_centre_containment(self, doc):
         regions = parse_gt(doc / "doc1_gt.xml")

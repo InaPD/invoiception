@@ -120,13 +120,18 @@ class TestParseAmount:
         assert parse_amount(raw) == pytest.approx(expected)
 
     @pytest.mark.parametrize(
-        "raw,expected", [("DISCOUNT(3.91%): (-)  51.2", 51.2), ("DISCOUNT(2.28%): (-)  23.94", 23.94)]
+        "raw,expected",
+        [("DISCOUNT(3.91%): (-)  51.2", 51.2), ("DISCOUNT(2.28%): (-)  23.94", 23.94)],
     )
     def test_discount_is_returned_as_a_positive_amount(self, raw, expected):
         assert parse_amount(raw) == pytest.approx(expected)
 
     def test_handles_thousands_separators(self):
         assert parse_amount("TOTAL : 1,309.36 USD") == pytest.approx(1309.36)
+
+    def test_preserves_a_negative_sign(self):
+        """Credit notes exist. Forcing every amount positive would silently flip them."""
+        assert parse_amount("TOTAL : -51.20 USD") == pytest.approx(-51.20)
 
     def test_returns_none_when_there_is_no_amount(self):
         assert parse_amount("Thank you for your business!") is None
@@ -226,9 +231,9 @@ class TestMapAnnotation:
         assert record["total_amount"] == pytest.approx(870.74)
 
     def test_derives_currency_from_the_amount_strings(self):
-        assert map_annotation(self.ANNOTATION, "Template17_Instance112.json").record["currency"] == (
-            "USD"
-        )
+        assert map_annotation(self.ANNOTATION, "Template17_Instance112.json").record[
+            "currency"
+        ] == ("USD")
 
     def test_carries_the_layout_id(self):
         assert map_annotation(self.ANNOTATION, "Template17_Instance112.json").layout_id == 17
@@ -252,7 +257,8 @@ class TestMapAnnotation:
 
     def test_gst_rate_class_feeds_tax(self):
         mapped = map_annotation(
-            {"OTHER": {"text": "x"}, "GST(18%)": {"text": "GST(18%) : 116.35"}}, "Template2_Instance1.json"
+            {"OTHER": {"text": "x"}, "GST(18%)": {"text": "GST(18%) : 116.35"}},
+            "Template2_Instance1.json",
         )
         assert mapped.record["tax"] == pytest.approx(116.35)
 
@@ -266,6 +272,44 @@ class TestMapAnnotation:
         assert mapped.record["tax"] == pytest.approx(28.51), (
             "summing would invent a number printed nowhere on the page"
         )
+        assert "tax:vat_and_gst" in mapped.conflicts
+
+    def test_a_rate_card_of_several_gst_lines_leaves_tax_unsupervised(self):
+        """Template25 prints GST at 1/5/12/18/20% of the subtotal - a rate card, not a
+        charge. TOTAL minus SUB_TOTAL matches none of them, so no printed figure is the
+        tax. Picking one would be a fabricated label."""
+        annotation = {
+            "OTHER": {"text": "x"},
+            "SUB_TOTAL": {"text": "SUB_TOTAL : 901.21  USD"},
+            "TOTAL": {"text": "TOTAL : 917.29 USD"},
+            "GST(1%)": {"text": "GST(1%) : 9.01"},
+            "GST(5%)": {"text": "GST(5%) : 45.06"},
+            "GST(12%)": {"text": "GST(12%) : 108.15"},
+            "GST(18%)": {"text": "GST(18%) : 162.22"},
+            "GST(20%)": {"text": "GST(20%) : 180.24"},
+        }
+        mapped = map_annotation(annotation, "Template25_Instance11.json")
+        assert "tax" not in mapped.record
+        assert "tax" not in mapped.supervised_fields
+        assert "tax:multiple_gst_rates" in mapped.conflicts
+
+    def test_a_single_gst_line_still_supervises_tax(self):
+        mapped = map_annotation(
+            {"OTHER": {"text": "x"}, "GST(9%)": {"text": "GST(9%) : 66.30"}},
+            "Template13_Instance4.json",
+        )
+        assert mapped.record["tax"] == pytest.approx(66.30)
+        assert "tax:multiple_gst_rates" not in mapped.conflicts
+
+    def test_an_explicit_vat_line_survives_a_gst_rate_card(self):
+        annotation = {
+            "OTHER": {"text": "x"},
+            "TAX": {"text": "TAX:VAT (4.41%):  28.51 $"},
+            "GST(1%)": {"text": "GST(1%) : 9.01"},
+            "GST(18%)": {"text": "GST(18%) : 162.22"},
+        }
+        mapped = map_annotation(annotation, "Template29_Instance192.json")
+        assert mapped.record["tax"] == pytest.approx(28.51), "VAT is a real printed charge"
         assert "tax:vat_and_gst" in mapped.conflicts
 
     def test_buyer_precedence_prefers_bill_to_over_ship_to(self):

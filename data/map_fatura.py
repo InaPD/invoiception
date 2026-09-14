@@ -6,8 +6,10 @@ there, because the labelling process is part of the result.
 Three things about the released data that the paper does not tell you, all verified
 against all 10,000 annotation files:
 
-1. There are **35** annotation keys, not the 24 the paper tabulates. The paper collapses
-   seven `GST(<rate>%)` classes into one "GST" row and three `GSTIN*` classes into none.
+1. There are **35** annotation keys, not the 24 the paper tabulates. The eleven-class gap:
+   the seven `GST(<rate>%)` classes appear as a single "GST" row (-6), the three `GSTIN*`
+   classes are absent (-3), and `INVOICE_INFO` and `OTHER` are not tabulated at all (-2),
+   though both are present in every one of the 10,000 released files.
 2. Every annotated value carries its **printed label**: "TOTAL : 972.30 EUR", not "972.30".
    Stripping those labels is the bulk of this module.
 3. `TABLE` is a bare bounding box - a single `table` token in the LayoutLM view, with no
@@ -144,14 +146,16 @@ def strip_label(raw: str, klass: str) -> str:
 def parse_amount(raw: str) -> float | None:
     """Money from a labelled amount string, ignoring any bracketed percentage rate.
 
-    Discounts are printed as "DISCOUNT(3.91%): (-)  51.2" and come back positive: the
-    schema documents `discount` as the amount deducted, so the sign lives in the field name.
+    The sign is preserved. Credit notes and negative adjustments are real, and flipping
+    them silently would be worse than failing to parse them. Only `discount` is normalised
+    to a positive amount, at its call site, because the schema documents that field as the
+    amount deducted.
     """
     candidates = _NUMBER.findall(_RATE.sub(" ", raw))
     if not candidates:
         return None
     try:
-        return abs(float(candidates[-1].replace(",", "")))
+        return float(candidates[-1].replace(",", ""))
     except ValueError:
         return None
 
@@ -256,10 +260,16 @@ def map_annotation(annotation: dict[str, Any], filename: str) -> MappedRecord:
         supervised.update({"buyer.name", "buyer.address"})
 
     # --- tax: VAT and rate-parameterised GST compete for one field ----------------------
+    # Several GST lines on one document are a *rate card*, not a charge: Template25 prints
+    # GST at 1/5/12/18/20% of the subtotal and its TOTAL matches none of them. There is no
+    # printed tax figure to read, so `tax` goes unsupervised rather than being guessed at.
     gst_present = [k for k in GST_RATE_CLASSES if _text_of(annotation.get(k))]
     vat_text = _text_of(annotation.get("TAX"))
     if vat_text and gst_present:
         conflicts.append("tax:vat_and_gst")
+    if len(gst_present) > 1 and not vat_text:
+        conflicts.append("tax:multiple_gst_rates")
+        gst_present = []
     tax_text = vat_text or (_text_of(annotation[gst_present[0]]) if gst_present else None)
     if tax_text:
         record["tax"] = parse_amount(tax_text)
@@ -280,6 +290,10 @@ def map_annotation(annotation: dict[str, Any], filename: str) -> MappedRecord:
             value = parse_date(text)
         elif target in ("subtotal", "discount", "total_amount", "amount_due"):
             value = parse_amount(text)
+            # "DISCOUNT(3.91%): (-)  51.2" marks the deduction with "(-)", which is not a
+            # sign the number parser sees; the schema stores the amount deducted.
+            if target == "discount" and value is not None:
+                value = abs(value)
             currency_sources.append(text)
         else:
             value = strip_label(text, klass) or None
