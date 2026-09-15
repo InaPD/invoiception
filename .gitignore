@@ -1,0 +1,19 @@
+# Datasets are never committed - data/download.py fetches them.
+data/raw/
+data/interim/
+data/processed/
+
+# Splits are generated artifacts, but the frozen held-out manifests ARE committed
+# (see data/splits/) so the freeze is auditable in git history.
+
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+
+.env

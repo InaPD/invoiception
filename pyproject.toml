@@ -1,0 +1,29 @@
+[project]
+name = "slotfill"
+version = "0.1.0"
+description = "Can a small LoRA-tuned model extract invoice fields into a strict JSON schema at a fraction of a frontier model's cost?"
+requires-python = ">=3.10"
+dependencies = [
+    "jsonschema>=4.21",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.6",
+]
+
+[tool.setuptools]
+packages = ["schema", "data"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]

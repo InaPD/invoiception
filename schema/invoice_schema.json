@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/InaPD/slotfill/schema/invoice_schema.json",
+  "title": "Slotfill invoice record",
+  "description": "Strict extraction target. A model output either validates against this or it is a structured error - there is no partial credit at the schema level.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "invoice_number",
+    "purchase_order_number",
+    "invoice_date",
+    "due_date",
+    "vendor",
+    "buyer",
+    "currency",
+    "subtotal",
+    "discount",
+    "tax",
+    "total_amount",
+    "amount_due",
+    "payment_terms",
+    "line_items"
+  ],
+  "properties": {
+    "invoice_number": {
+      "description": "Invoice identifier as printed, punctuation and prefix preserved.",
+      "type": ["string", "null"],
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "purchase_order_number": {
+      "description": "Buyer's purchase order reference, when the invoice cites one.",
+      "type": ["string", "null"],
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "invoice_date": {
+      "description": "Issue date, normalised to ISO 8601 calendar date.",
+      "type": ["string", "null"],
+      "format": "date",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "due_date": {
+      "description": "Payment due date, normalised to ISO 8601 calendar date.",
+      "type": ["string", "null"],
+      "format": "date",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "vendor": {
+      "description": "Party issuing the invoice (seller/supplier).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "address", "email", "website"],
+      "properties": {
+        "name": { "type": ["string", "null"], "minLength": 1, "maxLength": 200 },
+        "address": { "type": ["string", "null"], "minLength": 1, "maxLength": 500 },
+        "email": { "type": ["string", "null"], "minLength": 3, "maxLength": 200 },
+        "website": { "type": ["string", "null"], "minLength": 1, "maxLength": 200 }
+      }
+    },
+    "buyer": {
+      "description": "Party being billed.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "address"],
+      "properties": {
+        "name": { "type": ["string", "null"], "minLength": 1, "maxLength": 200 },
+        "address": { "type": ["string", "null"], "minLength": 1, "maxLength": 500 }
+      }
+    },
+    "currency": {
+      "description": "ISO 4217 alphabetic code. Null when the document shows no currency marker.",
+      "type": ["string", "null"],
+      "pattern": "^[A-Z]{3}$"
+    },
+    "subtotal": {
+      "description": "Total before tax and discount.",
+      "type": ["number", "null"]
+    },
+    "discount": {
+      "description": "Discount applied, as a positive amount deducted.",
+      "type": ["number", "null"]
+    },
+    "tax": {
+      "description": "Tax charged. Sales tax, VAT and GST all land here - see the mapping table in the README.",
+      "type": ["number", "null"]
+    },
+    "total_amount": {
+      "description": "Total after tax and discount.",
+      "type": ["number", "null"]
+    },
+    "amount_due": {
+      "description": "Amount actually payable, when stated separately from the total.",
+      "type": ["number", "null"]
+    },
+    "payment_terms": {
+      "description": "Free-text terms and conditions governing payment.",
+      "type": ["string", "null"],
+      "minLength": 1,
+      "maxLength": 1000
+    },
+    "line_items": {
+      "description": "Billed lines in document order. An empty array means no line table was found, which is different from not looking.",
+      "type": "array",
+      "maxItems": 200,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["description", "quantity", "unit_price", "amount"],
+        "properties": {
+          "description": { "type": ["string", "null"], "minLength": 1, "maxLength": 500 },
+          "quantity": { "type": ["number", "null"] },
+          "unit_price": { "type": ["number", "null"] },
+          "amount": { "type": ["number", "null"] }
+        }
+      }
+    }
+  }
+}
