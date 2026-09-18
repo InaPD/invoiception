@@ -1,0 +1,139 @@
+{
+ "condition": "deepseek-test",
+ "eval_set": "dev_unseen",
+ "model": "deepseek/deepseek-v4-flash-vision-exp",
+ "n_documents": 20,
+ "n_predicted": 20,
+ "n_errors": 0,
+ "n_valid": 17,
+ "validity_rate": 0.85,
+ "field_accuracy_all": 0.8090909090909091,
+ "field_accuracy_valid": 0.9518716577540107,
+ "exact_match_all": 0.45,
+ "exact_match_valid": 0.5294117647058824,
+ "abstain_rate": 0.0,
+ "per_field": {
+  "invoice_number": {
+   "scoreable": 20,
+   "correct": 17,
+   "wrong": 0,
+   "invalid": 3,
+   "abstained": 0,
+   "accuracy_all": 0.85,
+   "accuracy_valid": 1.0
+  },
+  "invoice_date": {
+   "scoreable": 20,
+   "correct": 17,
+   "wrong": 0,
+   "invalid": 3,
+   "abstained": 0,
+   "accuracy_all": 0.85,
+   "accuracy_valid": 1.0
+  },
+  "due_date": {
+   "scoreable": 20,
+   "correct": 17,
+   "wrong": 0,
+   "invalid": 3,
+   "abstained": 0,
+   "accuracy_all": 0.85,
+   "accuracy_valid": 1.0
+  },
+  "vendor.name": {
+   "scoreable": 20,
+   "correct": 16,
+   "wrong": 1,
+   "invalid": 3,
+   "abstained": 0,
+   "accuracy_all": 0.8,
+   "accuracy_valid": 0.9411764705882353
+  },
+  "vendor.address": {
+   "scoreable": 20,
+   "correct": 17,
+   "wrong": 0,
+   "invalid": 3,
+   "abstained": 0,
+   "accuracy_all": 0.85,
+   "accuracy_valid": 1.0
+  },
+  "buyer.name": {
+   "scoreable": 20,
+   "correct": 17,
+   "wrong": 0,
+   "invalid": 3,
+   "abstained": 0,
+   "accuracy_all": 0.85,
+   "accuracy_valid": 1.0
+  },
+  "buyer.address": {
+   "scoreable": 20,
+   "correct": 15,
+   "wrong": 2,
+   "invalid": 3,
+   "abstained": 0,
+   "accuracy_all": 0.75,
+   "accuracy_valid": 0.8823529411764706
+  },
+  "currency": {
+   "scoreable": 20,
+   "correct": 17,
+   "wrong": 0,
+   "invalid": 3,
+   "abstained": 0,
+   "accuracy_all": 0.85,
+   "accuracy_valid": 1.0
+  },
+  "discount": {
+   "scoreable": 20,
+   "correct": 17,
+   "wrong": 0,
+   "invalid": 3,
+   "abstained": 0,
+   "accuracy_all": 0.85,
+   "accuracy_valid": 1.0
+  },
+  "total_amount": {
+   "scoreable": 20,
+   "correct": 17,
+   "wrong": 0,
+   "invalid": 3,
+   "abstained": 0,
+   "accuracy_all": 0.85,
+   "accuracy_valid": 1.0
+  },
+  "payment_terms": {
+   "scoreable": 20,
+   "correct": 11,
+   "wrong": 6,
+   "invalid": 3,
+   "abstained": 0,
+   "accuracy_all": 0.55,
+   "accuracy_valid": 0.6470588235294118
+  }
+ },
+ "latency_p50_s": 15.346803913998883,
+ "latency_p95_s": 80.82002298301086,
+ "mean_input_tokens": 1642.8,
+ "mean_output_tokens": 4636.9,
+ "mean_cache_read_tokens": 1024.0,
+ "cost_per_1k_usd": null,
+ "text_layer_ceiling": null,
+ "truncated_outputs": 3,
+ "config": {
+  "condition": "deepseek-test",
+  "eval_set": "dev_unseen",
+  "input_kind": "image",
+  "backend": "openai",
+  "model": "deepseek/deepseek-v4-flash-vision-exp",
+  "prompt_digest": "00d34abc620f54922e16f1b3e09efbc2e89ec0fe11b38a6365e070d43c2a428e",
+  "with_example": true,
+  "effort": null,
+  "max_tokens": 16000,
+  "excluded_fields": [],
+  "limit": 20,
+  "started_at": "2026-09-18T16:10:13+00:00",
+  "git_commit": "7a1221e"
+ }
+}
