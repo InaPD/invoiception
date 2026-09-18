@@ -3,6 +3,13 @@ data/raw/
 data/interim/
 data/processed/
 
+# eval.predict output: raw model responses, token usage and metrics per run. Ignored by
+# default - local experiment artifacts, not source. Specific runs are force-added and kept
+# as evidence when they informed a documented decision (see README's baseline shakedown).
+runs/*
+!runs/deepseek-test/
+!runs/gemini38-openrouter/
+
 __pycache__/
 *.py[cod]
 .venv/
