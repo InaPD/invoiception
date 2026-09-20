@@ -73,7 +73,11 @@ DROPPED_CLASSES = MappingProxyType(
         "INVOICE_INFO": "present as an empty list in all 10,000 files; carries no content",
         "LOGO": "graphical element, not an extractable field",
         "TITLE": "document heading ('INVOICE', 'COMMERCIAL INVOICE'), not invoice data",
-        "OTHER": "full-page text dump used for generation; supervising on it would leak the answer",
+        "OTHER": (
+            "a text pass over the whole page; supervising on it would leak the answer, and it "
+            "names a different vendor than the image on every document (it is the Path A text "
+            "layer, see eval/datasets.py)"
+        ),
         "NOTE": "free-text remarks and footers with no schema counterpart",
         "TOTAL_WORDS": "the total spelled out in words - redundant with total_amount",
         "PAYMENT_DETAILS": "bank account details; deliberately out of scope for this schema",

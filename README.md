@@ -7,9 +7,16 @@ to ship the prompt?**
 The deliverable is a recommendation backed by held-out eval numbers, not a model. Shipping
 the prompt is a valid and expected outcome. Full plan: [`docs/plan.md`](docs/plan.md).
 
-> **Status: phase 1 complete.** Schema, dataset mappers and the frozen layout split are in
-> place. No baseline has been run and no model has been trained, so there are no results to
-> report yet. The ship-gate table below is empty on purpose.
+> **Status: phase 2 harness built, baseline model chosen, full held-out run not yet done.**
+> Schema, dataset mappers, the frozen layout split and the eval harness (`eval/`) are in
+> place and verified end to end with an oracle backend. A dev-set shakedown across several
+> candidates picked **Gemini 3.8 Flash** as the prompted frontier baseline: 100% schema
+> validity, field accuracy and exact match across 28 `dev_unseen` documents (two independent
+> samples, zero failures), against 85% / 81% / 45% for the cheapest alternative tried
+> (DeepSeek v4-flash-vision-exp), which also had a 15% catastrophic-failure rate (empty
+> output, full token budget burned on hidden reasoning). The real held-out run (`test_seen`
+> + `test_unseen` + `rvlcdip`, ~1,170 documents) has not happened yet, so there are no
+> ship-gate numbers to report. The table below is empty on purpose.
 
 ## The answer
 
@@ -130,7 +137,7 @@ code.
 | `INVOICE_INFO` | _dropped_ | yes | present as an empty list in all 10,000 files; carries no content |
 | `LOGO` | _dropped_ | yes | graphical element, not an extractable field |
 | `NOTE` | _dropped_ | yes | free-text remarks and footers with no schema counterpart |
-| `OTHER` | _dropped_ | yes | full-page text dump used for generation; supervising on it would leak the answer |
+| `OTHER` | _dropped_ | yes | a text pass over the whole page; supervising on it would leak the answer, and it names a different vendor than the image on every document (it is the Path A text layer, see eval/datasets.py) |
 | `PAYMENT_DETAILS` | _dropped_ | yes | bank account details; deliberately out of scope for this schema |
 | `TABLE` | _dropped_ | yes | bounding box only - no cell text is released, so line items cannot be labelled |
 | `TITLE` | _dropped_ | yes | document heading ('INVOICE', 'COMMERCIAL INVOICE'), not invoice data |
@@ -213,6 +220,147 @@ other schema field is declared unscoreable rather than handed an invented label.
 Region text recovered across the 520 documents: `supplier` 463, `receiver` 473,
 `invoice_info` 480, `positions` 450, `total` 359, `other` 500.
 
+## Running the baseline
+
+Phase 2 sets the bar before any training: the prompted frontier model on both held-out
+sets, plus the Path A pre-check (text layer -> small model). Everything runs through one
+harness, so a later adapter is compared on the model and nothing else.
+
+```bash
+cp .env.example .env            # OPENAI_API_KEY=<Google AI Studio key>
+set -a; source .env; set +a
+
+# 1. Iterate the prompt on the dev set only. It is unseen layouts, but not frozen.
+#    Cheap dev iteration goes through OpenRouter: no daily quota, ~2x the direct-Google
+#    cost for this model, negligible at this sample size.
+python -m eval.predict --set dev_unseen --input image \
+    --backend openai --base-url https://openrouter.ai/api/v1 \
+    --model google/gemini-3.8-flash --condition vision-frontier --limit 20
+python -m eval.evaluate runs/vision-frontier/dev_unseen
+
+# 2. The frontier baseline on the held-out sets. --held-out is required on purpose.
+#    Direct to Google AI Studio: needs paid billing enabled on the project first - the
+#    free tier caps at ~20 requests/day pooled across models, nowhere near enough for
+#    ~1,170 documents. Direct pricing also measured cheaper than the OpenRouter path for
+#    this model (lower output-token counts observed), which is why the real run goes here.
+python -m eval.predict --set test_seen   --input image \
+    --backend openai --base-url https://generativelanguage.googleapis.com/v1beta/openai/ \
+    --model gemini-3.8-flash --condition vision-frontier --held-out
+python -m eval.predict --set test_unseen --input image \
+    --backend openai --base-url https://generativelanguage.googleapis.com/v1beta/openai/ \
+    --model gemini-3.8-flash --condition vision-frontier --held-out
+python -m eval.predict --set rvlcdip     --input image \
+    --backend openai --base-url https://generativelanguage.googleapis.com/v1beta/openai/ \
+    --model gemini-3.8-flash --condition vision-frontier --held-out
+
+# 3. Path A pre-check: shipped text layer -> small model.
+python -m eval.predict --set test_unseen --input text --model claude-haiku-4-5 \
+    --condition text-small --held-out
+python -m eval.predict --set rvlcdip     --input text --model claude-haiku-4-5 \
+    --condition text-small --held-out
+
+python -m eval.evaluate runs/*/test_seen runs/*/test_unseen runs/*/rvlcdip
+```
+
+Each run writes `runs/<condition>/<set>/run_config.json` (model, effort, every knob, and a
+SHA-256 of the prompt) and `predictions.jsonl` (raw output, token counts and wall-clock
+latency per document). Runs resume: answered documents are skipped, errored ones are
+retried, and a run whose prompt or model changed is refused rather than silently mixed.
+The prompt digest is how a held-out run can be shown to have used the prompt that was
+frozen before it, not one tweaked after.
+
+### Why Gemini 3.8 Flash, and why two different endpoints for it
+
+The frontier baseline was chosen by shakedown-testing several candidates on 20-28
+`dev_unseen` documents each rather than committing API spend to an unproven model. Claude
+Opus 5 was the original default (see the plan); Gemini 3.8 Flash was tried instead because
+the plan only requires the baseline be "genuinely strong," not a specific vendor, and this
+kept the shakedown itself nearly free. Findings:
+
+- **DeepSeek v4-flash-vision-exp** (OpenRouter): 85% schema validity, 45% exact match, and
+  a 15% rate of returning nothing at all - the model spent its full 16K-token output budget
+  on invisible reasoning and produced zero visible text. Cheap per token, expensive per
+  usable invoice.
+- **Gemini 3.8 Flash**: 100% schema validity, field accuracy and exact match across every
+  document tried, on both the direct-Google and OpenRouter paths (28 documents combined,
+  zero failures).
+
+Gemini 3.8 Flash's own free tier (direct via Google) was also tried and ruled out for
+anything beyond a handful of documents: the observed daily quota is pooled across model
+versions at roughly 20 requests/day total, not 20 per model as the API's own error messages
+imply - confirmed empirically by switching model names mid-quota and getting blocked
+immediately rather than a fresh allowance. Two paid endpoints remain for the same model:
+OpenRouter (already funded, no setup, but this model measured ~2x the output tokens per
+document through it) and direct Google (needs billing enabled, but cheaper per document) -
+hence dev iteration on the former and the real run on the latter.
+
+### Trying other models through OpenRouter
+
+`--backend openai` targets any OpenAI-compatible endpoint, which is how the vLLM adapter
+gets served in phase 5, but the same flag also reaches OpenRouter today - one balance,
+many providers, useful for comparing candidate models cheaply before committing real API
+spend to a held-out run. This is exactly how the shakedown above was run:
+
+```bash
+# .env: OPENROUTER_API_KEY=... (eval/predict.py reads it automatically - no --api-key needed)
+python -m eval.predict --set dev_unseen --input image \
+    --backend openai --base-url https://openrouter.ai/api/v1 \
+    --model deepseek/deepseek-v4-flash-vision-exp \
+    --condition deepseek-test --limit 20
+python -m eval.evaluate runs/deepseek-test/dev_unseen
+```
+
+Two things do not come for free through this path:
+
+- **Cost.** [`eval/pricing.py`](eval/pricing.py) only prices models it has an explicit,
+  verified entry for - Anthropic's own models, plus Gemini 3.8 Flash now that it is the
+  chosen baseline. `Cost / 1k invoices` reads `-` for anything else (DeepSeek included) -
+  the metric is honestly absent, not silently wrong. Add an entry to `PRICES` (with a
+  source for the rate) before trusting that column for a new model.
+- **Credibility as the published baseline.** The plan asks for a genuinely strong
+  frontier model here, specifically so beating it means something. An unfamiliar or
+  low-quality model is a fine, cheap way to smoke-test the harness end to end - it is not
+  a substitute for the shakedown that picks the actual baseline.
+
+**The prompt** ([`eval/prompt.py`](eval/prompt.py)) is the strong baseline the plan asks
+for: the full schema, explicit conventions (ISO dates, ISO 4217 codes, numbers as numbers,
+null when not printed) and one worked example, `Template48_Instance97` from the *train*
+split, as a page image plus its hand-written record. The example is the cacheable prefix.
+
+**Metrics** ([`eval/evaluate.py`](eval/evaluate.py)), identical for every condition:
+
+| Metric | Definition |
+|---|---|
+| Schema validity | parses as JSON and validates; a markdown fence is tolerated, prose is not |
+| Field accuracy (all) | correct field instances / scoreable ones, an invalid output wrong on every field. **The headline view.** |
+| Field accuracy (valid) | the same over schema-valid outputs only |
+| Exact match | documents with every scoreable field right (FATURA only; RVL-CDIP has no values) |
+| Cost / 1k invoices | measured tokens x published prices; self-hosted cost is measured at the serving layer |
+| p95 latency | nearest-rank over the run's successful requests, same code path for every condition |
+
+Comparison rules live in [`eval/scoring.py`](eval/scoring.py): money agrees when rounded
+half-up to the cent, dates and currency codes match exactly, other strings match after
+case folding and collapsing whitespace and commas (so a wrapped address matches the joined
+label). Only fields the dataset annotated for that document are scored; a prediction for
+an unannotated field has no label to check against. `line_items` is never scored.
+
+On RVL-CDIP "correct" means grounded in the right annotated region, and a null prediction
+is an **abstention** - excluded from the denominator and reported separately - because a
+region box cannot say whether a field was printed. Expect the OCR noise to cap grounding
+below what the model actually reads: `I5UO.OO` will not match `1500.00`, and that ceiling
+is counted, not corrected.
+
+### Path A and the text layers
+
+Neither dataset ships PDFs, so the text path consumes the text layer each dataset does
+ship: FATURA's `OTHER` class and RVL-CDIP's ABBYY OCR words joined in reading order.
+FATURA's is a stale text pass: on every document it names a different vendor than both the
+image and the `SELLER_NAME` label (0 of 360 agree; every other field agrees on 83-100%).
+`vendor.name` and `vendor.website` are therefore **unscoreable on the text path** and the
+evaluator prints a per-field *text-layer ceiling* - the share of reference values present
+in the input text at all - next to the text-path accuracy. The text path cannot beat it,
+and reading Path A numbers without it would blame the model for the input.
+
 ## Limitations
 
 - Training data is **synthetic**. FATURA's content is generated, its layouts are clean, and
@@ -243,7 +391,14 @@ data/      download.py, sources.py            fetch + provenance
            split.py, build_splits.py          layout-id split
            splits/*.json                      frozen manifests (committed)
            mapping_report.py                  generates the table above
-tests/                                        schema, mappers, split
+eval/      predict.py                         run one condition on one set; resumable
+           evaluate.py                        a run -> metrics.json + ship-gate row
+           prompt.py                          schema prompt + the worked example
+           scoring.py                         per-document field comparison rules
+           backends.py                        Anthropic SDK / OpenAI-compatible (vLLM)
+           datasets.py, pages.py, pricing.py  eval items, image encoding, published prices
+runs/      <condition>/<set>/                 run_config.json, predictions.jsonl, metrics.json
+tests/                                        schema, mappers, split, scorer, harness
 ```
 
 ## Citations

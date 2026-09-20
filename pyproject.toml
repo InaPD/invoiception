@@ -5,6 +5,9 @@ description = "Can a small LoRA-tuned model extract invoice fields into a strict
 requires-python = ">=3.10"
 dependencies = [
     "jsonschema>=4.21",
+    "pillow>=10.0",
+    "anthropic>=1.0",
+    "openai>=1.0",
 ]
 
 [project.optional-dependencies]
@@ -15,7 +18,7 @@ dev = [
 ]
 
 [tool.setuptools]
-packages = ["schema", "data"]
+packages = ["schema", "data", "eval"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
