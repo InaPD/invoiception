@@ -118,3 +118,26 @@ def test_cli_can_refuse_to_resume():
     )
     config = config_from_args(args)
     assert config.resume is False and config.save_steps == 25
+
+
+def test_warmup_steps_is_a_share_of_the_optimizer_steps():
+    from train.train_vlm import warmup_steps
+
+    # 1,750 examples / (2 x 4) = 219 optimizer steps per epoch; 3% of that is ~7.
+    assert warmup_steps(TrainConfig(), n_examples=1750) == 7
+    # A 16-example shakedown still warms up for at least one step.
+    assert warmup_steps(TrainConfig(), n_examples=16) == 1
+    assert warmup_steps(TrainConfig(epochs=2), n_examples=1750) == 13
+
+
+def test_trainer_takes_processing_class_on_new_trl_and_tokenizer_on_old():
+    from train.train_vlm import processor_kwarg
+
+    class NewTrl:
+        def __init__(self, model, processing_class=None): ...
+
+    class OldTrl:
+        def __init__(self, model, tokenizer=None): ...
+
+    assert processor_kwarg(NewTrl, "P") == {"processing_class": "P"}
+    assert processor_kwarg(OldTrl, "P") == {"tokenizer": "P"}

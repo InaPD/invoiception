@@ -49,6 +49,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import subprocess
 import time
 from dataclasses import asdict, dataclass
@@ -243,11 +244,30 @@ def latest_checkpoint(out_dir: Path) -> Path | None:
     return max(checkpoints)[1] if checkpoints else None
 
 
+def processor_kwarg(trainer_cls: Any, processor: Any) -> dict[str, Any]:
+    """TRL renamed `SFTTrainer(tokenizer=...)` to `processing_class=...`; pass the right one."""
+    import inspect
+
+    params = inspect.signature(trainer_cls.__init__).parameters
+    key = "processing_class" if "processing_class" in params else "tokenizer"
+    return {key: processor}
+
+
+def warmup_steps(config: TrainConfig, *, n_examples: int) -> int:
+    """`warmup_ratio` is deprecated in TRL; the same share, as a step count, at least 1."""
+    per_epoch = math.ceil(n_examples / (config.batch_size * config.grad_accum))
+    total = math.ceil(per_epoch * config.epochs)
+    return max(1, round(config.warmup_ratio * total))
+
+
 def train(config: TrainConfig, bundle_dir: Path, out_dir: Path) -> Path:
-    import torch
-    from trl import SFTConfig, SFTTrainer
+    # Unsloth patches trl/transformers/peft and must be imported before them.
+    # isort: off
     from unsloth import is_bf16_supported
     from unsloth.trainer import UnslothVisionDataCollator
+    import torch
+    from trl import SFTConfig, SFTTrainer
+    # isort: on
 
     started_at = datetime.now(UTC).isoformat(timespec="seconds")
     manifest = json.loads((bundle_dir / BUNDLE_FILE).read_text(encoding="utf-8"))
@@ -264,13 +284,17 @@ def train(config: TrainConfig, bundle_dir: Path, out_dir: Path) -> Path:
     collator = UnslothVisionDataCollator(
         model,
         tokenizer,
+        # The default ("min") reads the model's image size, finds none for Qwen2.5-VL and
+        # shrinks every page to 512 on one side. Inference sees the full 595x841 page, so
+        # training must too; "max" means no resizing.
+        resize="max",
         train_on_responses_only=True,
         instruction_part=QWEN_INSTRUCTION_PART,
         response_part=QWEN_RESPONSE_PART,
     )
     trainer = SFTTrainer(
         model=model,
-        tokenizer=tokenizer,
+        **processor_kwarg(SFTTrainer, tokenizer),
         data_collator=collator,
         train_dataset=dataset,
         args=SFTConfig(
@@ -278,7 +302,7 @@ def train(config: TrainConfig, bundle_dir: Path, out_dir: Path) -> Path:
             gradient_accumulation_steps=config.grad_accum,
             num_train_epochs=config.epochs,
             learning_rate=config.lr,
-            warmup_ratio=config.warmup_ratio,
+            warmup_steps=warmup_steps(config, n_examples=len(rows)),
             weight_decay=config.weight_decay,
             lr_scheduler_type=config.lr_scheduler,
             seed=config.seed,
