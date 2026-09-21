@@ -55,6 +55,12 @@ TRAIN_LAYOUTS: tuple[int, ...] = tuple(
 #: inside the 1,500-2,000 band the plan asks for.
 DOCS_PER_LAYOUT = {"train": 50, "dev_unseen": 40, "test_seen": 10, "test_unseen": 30}
 
+#: The data-mix ablation (plan, phase 3): the same 35 layouts at 35 x 115 = 4,025
+#: documents, a superset of `train`. More documents on the same templates is the question
+#: the ablation asks, so the layout set is deliberately identical.
+ABLATION_DOCS_PER_LAYOUT = 115
+ABLATION_SPLIT = "train_4k"
+
 #: Frozen the moment they are written. Changing one invalidates every number in the README.
 FROZEN_SPLITS: tuple[str, ...] = ("test_seen", "test_unseen")
 
@@ -131,6 +137,25 @@ def build_splits(doc_ids: Iterable[str], seed: int = DEFAULT_SEED) -> dict[str, 
         "test_seen": Split("test_seen", frozenset(TRAIN_LAYOUTS), test_seen, frozen=True),
         "test_unseen": Split("test_unseen", frozenset(HELD_OUT_LAYOUTS), test_unseen, frozen=True),
     }
+
+
+def build_ablation_split(
+    doc_ids: Iterable[str], splits: dict[str, Split], seed: int = DEFAULT_SEED
+) -> Split:
+    """`train_4k`: `train` plus extra documents from the same layouts, none from any eval set.
+
+    Built on top of the four base splits rather than inside `build_splits` so the ablation
+    can never move the base split: it only ever adds documents to what is already there.
+    """
+    buckets = group_by_layout(doc_ids)
+    base = splits["train"]
+    taken = frozenset().union(*(set(s.doc_ids) for s in splits.values()))
+    extra_per_layout = ABLATION_DOCS_PER_LAYOUT - DOCS_PER_LAYOUT["train"]
+    # A seed offset keeps this draw independent of the base split's, which used `seed`.
+    extra = _sample(
+        buckets, sorted(base.layouts), extra_per_layout, Random(seed + 1), exclude=taken
+    )
+    return Split(ABLATION_SPLIT, base.layouts, tuple(sorted({*base.doc_ids, *extra})), frozen=False)
 
 
 def manifest_digest(split: Split) -> str:

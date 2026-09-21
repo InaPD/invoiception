@@ -49,7 +49,7 @@ FATURA_IMAGE_VARIANT = "images"
 _ANNOTATION = f"{_FATURA_ROOT}/Annotations/Original_Format/{{doc_id}}.json"
 _IMAGE = f"{_FATURA_ROOT}/{FATURA_IMAGE_VARIANT}/{{doc_id}}.jpg"
 
-FATURA_SETS: tuple[str, ...] = ("train", "dev_unseen", "test_seen", "test_unseen")
+FATURA_SETS: tuple[str, ...] = ("train", "train_4k", "dev_unseen", "test_seen", "test_unseen")
 EVAL_SETS: tuple[str, ...] = ("dev_unseen", "test_seen", "test_unseen", "rvlcdip")
 #: Never used for prompt iteration. `predict.py` demands an explicit flag to touch them.
 FROZEN_SETS: frozenset[str] = frozenset({"test_seen", "test_unseen", "rvlcdip"})

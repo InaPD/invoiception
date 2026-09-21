@@ -84,3 +84,19 @@ def test_prompt_digest_is_stable_and_distinguishes_variants():
     assert prompt_digest("image") != prompt_digest("text")
     assert prompt_digest("image") != prompt_digest("image", with_example=False)
     assert len(prompt_digest("image")) == 64
+
+
+def test_minimal_request_is_image_plus_instruction_and_nothing_else():
+    """The tuned adapter is trained on the page and the fixed instruction alone - no
+    schema in a system prompt, no worked example. It must be evaluated on exactly that."""
+    request = build_request(IMAGE, input_kind="image", with_example=False, with_schema=False)
+    assert request.system == ""
+    (target,) = request.messages
+    assert target.parts == (IMAGE, TextPart(INSTRUCTION))
+
+
+def test_prompt_digest_distinguishes_the_minimal_prompt():
+    full = prompt_digest("image")
+    minimal = prompt_digest("image", with_example=False, with_schema=False)
+    no_example = prompt_digest("image", with_example=False)
+    assert len({full, minimal, no_example}) == 3

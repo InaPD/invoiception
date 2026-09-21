@@ -10,6 +10,10 @@ runs/*
 !runs/deepseek-test/
 !runs/gemini38-openrouter/
 
+# Trained LoRA adapters downloaded from the GPU box: weights stay out of git. Their
+# run_config.json / smoke.json / train_log.json are committed under runs/train/<name>/.
+adapters/
+
 __pycache__/
 *.py[cod]
 .venv/

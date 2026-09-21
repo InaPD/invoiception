@@ -305,3 +305,14 @@ def test_make_backend_openai_reads_base_url_and_resolved_key(monkeypatch):
     assert backend.model == "deepseek/deepseek-v4-flash-vision-exp"
     assert backend._client.api_key == "or-key"
     assert backend._client.base_url is not None and "openrouter.ai" in str(backend._client.base_url)
+
+
+def test_run_config_records_the_schema_digest_and_older_configs_load_as_none():
+    from eval.predict import RunConfig
+
+    config = RunConfig("c", "dev_unseen", "image", "openai", "m", "p" * 64)
+    assert len(config.schema_digest) == 64
+    payload = json.loads(config.to_json())
+    del payload["schema_digest"]
+    assert RunConfig.from_json(json.dumps(payload)).schema_digest is None
+    assert RunConfig.from_json(config.to_json()) == config

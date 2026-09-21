@@ -100,8 +100,8 @@
       "maxLength": 1000
     },
     "line_items": {
-      "description": "Billed lines in document order. An empty array means no line table was found, which is different from not looking.",
-      "type": "array",
+      "description": "Billed lines in document order. An empty array means no line table was found; null means this extractor does not produce line items at all (no training dataset annotates them). The two are different claims.",
+      "type": ["array", "null"],
       "maxItems": 200,
       "items": {
         "type": "object",
