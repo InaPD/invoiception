@@ -260,6 +260,46 @@ def warmup_steps(config: TrainConfig, *, n_examples: int) -> int:
     return max(1, round(config.warmup_ratio * total))
 
 
+def spread_sample(rows: list[dict[str, Any]], n: int) -> list[dict[str, Any]]:
+    """Every k-th row, so a smoke test over a name-sorted split sees every layout in it."""
+    if n >= len(rows):
+        return list(rows)
+    step = len(rows) / n
+    return [rows[int(i * step)] for i in range(n)]
+
+
+def step_health(log_history: list[dict[str, Any]]) -> dict[str, int]:
+    """How many logged steps had a NaN loss or gradient norm (a NaN grad norm is a step the
+    fp16 scaler skipped). The first T4 run logged NaN loss on every step while the adapter
+    demonstrably learned, so this is recorded rather than eyeballed."""
+    steps = [row for row in log_history if "grad_norm" in row]
+    return {
+        "logged_steps": len(steps),
+        "nan_loss_steps": sum(math.isnan(float(row.get("loss", 0))) for row in steps),
+        "nan_grad_norm_steps": sum(math.isnan(float(row["grad_norm"])) for row in steps),
+    }
+
+
+def _probe_first_batch(trainer, collator, dataset) -> dict[str, Any]:
+    """One collated batch through the model in eval mode: how many label tokens each
+    example trains on, and whether the loss is finite before any fp16 bookkeeping."""
+    import torch
+
+    batch = collator([dataset[i] for i in range(min(2, len(dataset)))])
+    label_tokens = [int((row != collator.ignore_index).sum()) for row in batch["labels"]]
+    batch = {k: v.to(trainer.model.device) if hasattr(v, "to") else v for k, v in batch.items()}
+    with torch.no_grad():
+        loss = float(trainer.model(**batch).loss.float())
+    probe = {"label_tokens_per_example": label_tokens, "first_batch_loss": loss}
+    print(f"probe: {probe}")
+    if not all(label_tokens):
+        raise RuntimeError(
+            "an example has no label tokens: the response markers do not match the chat "
+            "template, so nothing would be learned"
+        )
+    return probe
+
+
 def train(config: TrainConfig, bundle_dir: Path, out_dir: Path) -> Path:
     # Unsloth patches trl/transformers/peft and must be imported before them.
     # isort: off
@@ -328,6 +368,7 @@ def train(config: TrainConfig, bundle_dir: Path, out_dir: Path) -> Path:
 
         shutil.rmtree(out_dir / TRAINER_DIR)  # --fresh means it: no stale checkpoints
     checkpoint = latest_checkpoint(out_dir) if config.resume else None
+    probe = _probe_first_batch(trainer, collator, dataset)
     gpu = torch.cuda.get_device_name(0) if torch.cuda.is_available() else None
     print(f"training on {gpu}; {len(dataset)} examples, {config.epochs} epoch(s)")
     if checkpoint:
@@ -352,6 +393,9 @@ def train(config: TrainConfig, bundle_dir: Path, out_dir: Path) -> Path:
         gpu=gpu,
         resumed_from=str(checkpoint.relative_to(out_dir)) if checkpoint else None,
     )
+    run_config["probe"] = probe
+    run_config["step_health"] = step_health(trainer.state.log_history)
+    print(f"step health: {run_config['step_health']}")
     (out_dir / RUN_CONFIG_FILE).write_text(json.dumps(run_config, indent=1) + "\n")
     print(f"adapter saved to {out_dir / ADAPTER_DIR} after {train_seconds / 60:.1f} min")
 
@@ -377,10 +421,10 @@ def _generate(model, tokenizer, image, instruction: str) -> str:
 
 
 def smoke(model, tokenizer, bundle_dir: Path, out_dir: Path, *, n: int) -> dict[str, Any]:
-    """Generate for the first `n` dev_unseen pages and score them. Writes smoke.json."""
+    """Generate for `n` dev_unseen pages spread over its layouts and score them."""
     from PIL import Image
 
-    rows = load_bundle_split(bundle_dir, SMOKE_SPLIT, for_training=False)[:n]
+    rows = spread_sample(load_bundle_split(bundle_dir, SMOKE_SPLIT, for_training=False), n)
     results, outputs = [], []
     for row in rows:
         with Image.open(bundle_dir / row["image"]) as page:
