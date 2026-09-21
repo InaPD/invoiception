@@ -1,0 +1,169 @@
+{
+ "split": "dev_unseen",
+ "n_documents": 20,
+ "validity_rate": 1.0,
+ "field_accuracy_all": 0.9818181818181818,
+ "exact_match_all": 0.8,
+ "documents": [
+  {
+   "doc_id": "Template14_Instance103",
+   "valid": true,
+   "correct": 11,
+   "scoreable": 11,
+   "latency_s": 51.1994815980006,
+   "raw_output": "{\"invoice_number\":\"1847-906\",\"purchase_order_number\":null,\"invoice_date\":\"2005-12-22\",\"due_date\":\"2003-05-10\",\"vendor\":{\"name\":\"Faulkner LLC\",\"address\":\"841 Marshall Knolls, Timothystad, SC 63653 US\",\"email\":null,\"website\":null},\"buyer\":{\"name\":\"Whitney Nichols\",\"address\":\"67317 Aaron Mountains, Emilyfort, NE 01066 US\"},\"currency\":\"EUR\",\"subtotal\":null,\"discount\":37.44,\"tax\":null,\"total_amount\":877.51,\"amount_due\":null,\"payment_terms\":\"1. Please send payment within 8 days of receiving this invoice., There will be a 2.5% interest charge per month on late invoices., 2. Please include the Invoice number in your payment notes.\",\"line_items\":null}"
+  },
+  {
+   "doc_id": "Template14_Instance11",
+   "valid": true,
+   "correct": 11,
+   "scoreable": 11,
+   "latency_s": 48.57818337000026,
+   "raw_output": "{\"invoice_number\":\"INV/64-53/657\",\"purchase_order_number\":null,\"invoice_date\":\"2002-05-08\",\"due_date\":\"2012-06-10\",\"vendor\":{\"name\":\"Faulkner LLC\",\"address\":\"841 Marshall Knolls, Timothystad, SC 63653 US\",\"email\":null,\"website\":null},\"buyer\":{\"name\":\"Christine Bender\",\"address\":\"60254 Ryan Circle Suite 846, New Samantha, DE 66746 US\"},\"currency\":\"EUR\",\"subtotal\":null,\"discount\":21.57,\"tax\":null,\"total_amount\":516.09,\"amount_due\":null,\"payment_terms\":\"1. Please send payment within 8 days of receiving this invoice., There will be a 2.5% interest charge per month on late invoices., 2. Please include the Invoice number in your payment notes.\",\"line_items\":null}"
+  },
+  {
+   "doc_id": "Template14_Instance110",
+   "valid": true,
+   "correct": 11,
+   "scoreable": 11,
+   "latency_s": 41.44741662300021,
+   "raw_output": "{\"invoice_number\":\"INV/13-54/613\",\"purchase_order_number\":null,\"invoice_date\":\"1996-08-07\",\"due_date\":\"2018-08-07\",\"vendor\":{\"name\":\"Faulkner LLC\",\"address\":\"841 Marshall Knolls, Timothystad, SC 63653 US\",\"email\":null,\"website\":null},\"buyer\":{\"name\":\"Tracy Herrera\",\"address\":\"4490 Massey Highway Suite 611, Andreamouth, TX 48673 US\"},\"currency\":\"USD\",\"subtotal\":null,\"discount\":26.09,\"tax\":null,\"total_amount\":609.75,\"amount_due\":null,\"payment_terms\":\"will be charged if payment is not made within the due date.\",\"line_items\":null}"
+  },
+  {
+   "doc_id": "Template14_Instance114",
+   "valid": true,
+   "correct": 11,
+   "scoreable": 11,
+   "latency_s": 46.8941763440007,
+   "raw_output": "{\"invoice_number\":\"INV/05-34/877\",\"purchase_order_number\":null,\"invoice_date\":\"2021-07-08\",\"due_date\":\"2013-09-21\",\"vendor\":{\"name\":\"Faulkner LLC\",\"address\":\"841 Marshall Knolls, Timothystad, SC 63653 US\",\"email\":null,\"website\":null},\"buyer\":{\"name\":\"Sergio West\",\"address\":\"1203 Jones Garden, Andersonbury, SC 04504 US\"},\"currency\":\"USD\",\"subtotal\":null,\"discount\":17.68,\"tax\":null,\"total_amount\":576.11,\"amount_due\":null,\"payment_terms\":\"1. Please send payment within 8 days of receiving this invoice., There will be a 2.5% interest charge per month on late invoices., 2. Please include the Invoice number in your payment notes.\",\"line_items\":null}"
+  },
+  {
+   "doc_id": "Template14_Instance117",
+   "valid": true,
+   "correct": 11,
+   "scoreable": 11,
+   "latency_s": 41.043063531999906,
+   "raw_output": "{\"invoice_number\":\"INV14696241\",\"purchase_order_number\":null,\"invoice_date\":\"2019-10-31\",\"due_date\":\"2019-11-25\",\"vendor\":{\"name\":\"Faulkner LLC\",\"address\":\"841 Marshall Knolls, Timothystad, SC 63653 US\",\"email\":null,\"website\":null},\"buyer\":{\"name\":\"Bethany Moore\",\"address\":\"6905 Landry Bypass Suite 207, Lake Jonathan, MA 19982 US\"},\"currency\":\"USD\",\"subtotal\":null,\"discount\":16.12,\"tax\":null,\"total_amount\":396.68,\"amount_due\":null,\"payment_terms\":\"will be charged if payment is not made within the due date.\",\"line_items\":null}"
+  },
+  {
+   "doc_id": "Template14_Instance132",
+   "valid": true,
+   "correct": 11,
+   "scoreable": 11,
+   "latency_s": 47.69680665299984,
+   "raw_output": "{\"invoice_number\":\"INV66231671\",\"purchase_order_number\":null,\"invoice_date\":\"2000-03-06\",\"due_date\":\"2015-12-17\",\"vendor\":{\"name\":\"Faulkner LLC\",\"address\":\"841 Marshall Knolls, Timothystad, SC 63653 US\",\"email\":null,\"website\":null},\"buyer\":{\"name\":\"Thomas Lee\",\"address\":\"32086 Moore Passage Suite 960, South Joshua, MD 89592 US\"},\"currency\":\"EUR\",\"subtotal\":null,\"discount\":15.78,\"tax\":null,\"total_amount\":747.99,\"amount_due\":null,\"payment_terms\":\"1. Please send payment within 8 days of receiving this invoice., There will be a 2.5% interest charge per month on late invoices., 2. Please include the Invoice number in your payment notes.\",\"line_items\":null}"
+  },
+  {
+   "doc_id": "Template14_Instance134",
+   "valid": true,
+   "correct": 11,
+   "scoreable": 11,
+   "latency_s": 40.7590785579996,
+   "raw_output": "{\"invoice_number\":\"INV21197005\",\"purchase_order_number\":null,\"invoice_date\":\"2016-11-16\",\"due_date\":\"2017-11-21\",\"vendor\":{\"name\":\"Faulkner LLC\",\"address\":\"841 Marshall Knolls, Timothystad, SC 63653 US\",\"email\":null,\"website\":null},\"buyer\":{\"name\":\"Phillip Todd\",\"address\":\"46461 Steven Way Apt. 345, Brandonfort, VT 35505 US\"},\"currency\":\"EUR\",\"subtotal\":null,\"discount\":9.33,\"tax\":null,\"total_amount\":648.98,\"amount_due\":null,\"payment_terms\":\"will be charged if payment is not made within the due date.\",\"line_items\":null}"
+  },
+  {
+   "doc_id": "Template14_Instance135",
+   "valid": true,
+   "correct": 11,
+   "scoreable": 11,
+   "latency_s": 47.70437486300034,
+   "raw_output": "{\"invoice_number\":\"INV24932329\",\"purchase_order_number\":null,\"invoice_date\":\"2004-06-20\",\"due_date\":\"1997-08-13\",\"vendor\":{\"name\":\"Faulkner LLC\",\"address\":\"841 Marshall Knolls, Timothystad, SC 63653 US\",\"email\":null,\"website\":null},\"buyer\":{\"name\":\"Megan Davis DVM\",\"address\":\"37331 Ashley Drives, Natashamouth, LA 77753 US\"},\"currency\":\"EUR\",\"subtotal\":null,\"discount\":24.78,\"tax\":null,\"total_amount\":536.13,\"amount_due\":null,\"payment_terms\":\"1. Please send payment within 8 days of receiving this invoice., There will be a 2.5% interest charge per month on late invoices., 2. Please include the Invoice number in your payment notes.\",\"line_items\":null}"
+  },
+  {
+   "doc_id": "Template14_Instance136",
+   "valid": true,
+   "correct": 10,
+   "scoreable": 11,
+   "latency_s": 47.78776339099932,
+   "raw_output": "{\"invoice_number\":\"INV/23-71735\",\"purchase_order_number\":null,\"invoice_date\":\"2012-06-05\",\"due_date\":\"2017-04-14\",\"vendor\":{\"name\":\"Faulkner LLC\",\"address\":\"841 Marshall Knolls, Timothystad, SC 63653 US\",\"email\":null,\"website\":null},\"buyer\":{\"name\":\"Amanda Bailey\",\"address\":\"3774 Newman Cliff, Princemouth, KS 41252 US\"},\"currency\":\"EUR\",\"subtotal\":null,\"discount\":8.56,\"tax\":null,\"total_amount\":636.46,\"amount_due\":null,\"payment_terms\":\"1. Please send payment within 8 days of receiving this invoice., There will be a 2.5% interest charge per month on late invoices., 2. Please include the Invoice number in your payment notes.\",\"line_items\":null}"
+  },
+  {
+   "doc_id": "Template14_Instance138",
+   "valid": true,
+   "correct": 11,
+   "scoreable": 11,
+   "latency_s": 40.59043270300026,
+   "raw_output": "{\"invoice_number\":\"1153-140\",\"purchase_order_number\":null,\"invoice_date\":\"2011-01-03\",\"due_date\":\"2000-10-24\",\"vendor\":{\"name\":\"Faulkner LLC\",\"address\":\"841 Marshall Knolls, Timothystad, SC 63653 US\",\"email\":null,\"website\":null},\"buyer\":{\"name\":\"John Patterson\",\"address\":\"74854 Dustin Corner Suite 452, Stephanieville, DE 01401 US\"},\"currency\":\"EUR\",\"subtotal\":null,\"discount\":14.39,\"tax\":null,\"total_amount\":347.88,\"amount_due\":null,\"payment_terms\":\"will be charged if payment is not made within the due date.\",\"line_items\":null}"
+  },
+  {
+   "doc_id": "Template14_Instance140",
+   "valid": true,
+   "correct": 10,
+   "scoreable": 11,
+   "latency_s": 39.187812373999805,
+   "raw_output": "{\"invoice_number\":\"6459-965\",\"purchase_order_number\":null,\"invoice_date\":\"2022-08-26\",\"due_date\":\"1998-09-28\",\"vendor\":{\"name\":\"Faulkner LLC\",\"address\":\"841 Marshall Knolls, Timoysthad, SC 63653 US\",\"email\":null,\"website\":null},\"buyer\":{\"name\":\"Francisco Meyer\",\"address\":\"667 Brown Canyon, Tylerland, NV 82980 US\"},\"currency\":\"USD\",\"subtotal\":null,\"discount\":17.47,\"tax\":null,\"total_amount\":421.76,\"amount_due\":null,\"payment_terms\":\"will be charged if payment is not made within the due date.\",\"line_items\":null}"
+  },
+  {
+   "doc_id": "Template14_Instance157",
+   "valid": true,
+   "correct": 11,
+   "scoreable": 11,
+   "latency_s": 47.19921793499998,
+   "raw_output": "{\"invoice_number\":\"3Y5M1d-476\",\"purchase_order_number\":null,\"invoice_date\":\"2014-05-25\",\"due_date\":\"2011-11-04\",\"vendor\":{\"name\":\"Faulkner LLC\",\"address\":\"841 Marshall Knolls, Timothystad, SC 63653 US\",\"email\":null,\"website\":null},\"buyer\":{\"name\":\"Bonnie Rodgers\",\"address\":\"840 Lori Parks, North Edwardville, AS 89503 US\"},\"currency\":\"EUR\",\"subtotal\":null,\"discount\":15.01,\"tax\":null,\"total_amount\":733.82,\"amount_due\":null,\"payment_terms\":\"1. Please send payment within 8 days of receiving this invoice., There will be a 2.5% interest charge per month on late invoices., 2. Please include the Invoice number in your payment notes.\",\"line_items\":null}"
+  },
+  {
+   "doc_id": "Template14_Instance158",
+   "valid": true,
+   "correct": 11,
+   "scoreable": 11,
+   "latency_s": 47.5263143709999,
+   "raw_output": "{\"invoice_number\":\"INV/73-34/603\",\"purchase_order_number\":null,\"invoice_date\":\"2020-09-09\",\"due_date\":\"2007-03-30\",\"vendor\":{\"name\":\"Faulkner LLC\",\"address\":\"841 Marshall Knolls, Timothystad, SC 63653 US\",\"email\":null,\"website\":null},\"buyer\":{\"name\":\"Sandra Stephenson\",\"address\":\"1425 Samuel Burg, West Scott, WI 81322 US\"},\"currency\":\"USD\",\"subtotal\":null,\"discount\":12.14,\"tax\":null,\"total_amount\":494.48,\"amount_due\":null,\"payment_terms\":\"1. Please send payment within 8 days of receiving this invoice., There will be a 2.5% interest charge per month on late invoices., 2. Please include the Invoice number in your payment notes.\",\"line_items\":null}"
+  },
+  {
+   "doc_id": "Template14_Instance159",
+   "valid": true,
+   "correct": 11,
+   "scoreable": 11,
+   "latency_s": 46.66263771300055,
+   "raw_output": "{\"invoice_number\":\"8Y8M7d-932\",\"purchase_order_number\":null,\"invoice_date\":\"2017-03-24\",\"due_date\":\"2012-08-31\",\"vendor\":{\"name\":\"Faulkner LLC\",\"address\":\"841 Marshall Knolls, Timothystad, SC 63653 US\",\"email\":null,\"website\":null},\"buyer\":{\"name\":\"Barbara Roy\",\"address\":\"04608 Ayers Spring, New Benjamin, OR 79496 US\"},\"currency\":\"EUR\",\"subtotal\":null,\"discount\":5.45,\"tax\":null,\"total_amount\":183.71,\"amount_due\":null,\"payment_terms\":\"1. Please send payment within 8 days of receiving this invoice., There will be a 2.5% interest charge per month on late invoices., 2. Please include the Invoice number in your payment notes.\",\"line_items\":null}"
+  },
+  {
+   "doc_id": "Template14_Instance16",
+   "valid": true,
+   "correct": 10,
+   "scoreable": 11,
+   "latency_s": 48.89888046099986,
+   "raw_output": "{\"invoice_number\":\"7Y2M9d-757\",\"purchase_order_number\":null,\"invoice_date\":\"2007-01-13\",\"due_date\":\"2012-11-08\",\"vendor\":{\"name\":\"Faulkner LLC\",\"address\":\"841 Marshall Knolls, Timoysthastad, SC 63653 US\",\"email\":null,\"website\":null},\"buyer\":{\"name\":\"Alexis Conrad\",\"address\":\"47173 Jackson Expressway Apt. 999, Martinshire, FL 44330 US\"},\"currency\":\"USD\",\"subtotal\":null,\"discount\":5.32,\"tax\":null,\"total_amount\":511.56,\"amount_due\":null,\"payment_terms\":\"1. Please send payment within 8 days of receiving this invoice., There will be a 2.5% interest charge per month on late invoices., 2. Please include the Invoice number in your payment notes.\",\"line_items\":null}"
+  },
+  {
+   "doc_id": "Template14_Instance162",
+   "valid": true,
+   "correct": 11,
+   "scoreable": 11,
+   "latency_s": 46.07884498600015,
+   "raw_output": "{\"invoice_number\":\"8855-208\",\"purchase_order_number\":null,\"invoice_date\":\"2016-02-27\",\"due_date\":\"1998-02-25\",\"vendor\":{\"name\":\"Faulkner LLC\",\"address\":\"841 Marshall Knolls, Timothystad, SC 63653 US\",\"email\":null,\"website\":null},\"buyer\":{\"name\":\"Sean Garcia\",\"address\":\"38389 Zachary Trail, East Robin, NY 99627 US\"},\"currency\":\"EUR\",\"subtotal\":null,\"discount\":36.29,\"tax\":null,\"total_amount\":782.46,\"amount_due\":null,\"payment_terms\":\"1. Please send payment within 8 days of receiving this invoice., There will be a 2.5% interest charge per month on late invoices., 2. Please include the Invoice number in your payment notes.\",\"line_items\":null}"
+  },
+  {
+   "doc_id": "Template14_Instance166",
+   "valid": true,
+   "correct": 10,
+   "scoreable": 11,
+   "latency_s": 40.11226994000026,
+   "raw_output": "{\"invoice_number\":\"4441-461\",\"purchase_order_number\":null,\"invoice_date\":\"2015-04-09\",\"due_date\":\"2007-10-09\",\"vendor\":{\"name\":\"Faulkner LLC\",\"address\":\"841 Marshall Knolls, Timoysthastad, SC 63653 US\",\"email\":null,\"website\":null},\"buyer\":{\"name\":\"David Kim\",\"address\":\"7215 Ashley Walk Suite 250, North David, SC 54551 US\"},\"currency\":\"EUR\",\"subtotal\":null,\"discount\":6.95,\"tax\":null,\"total_amount\":254.9,\"amount_due\":null,\"payment_terms\":\"will be charged if payment is not made within the due date.\",\"line_items\":null}"
+  },
+  {
+   "doc_id": "Template14_Instance168",
+   "valid": true,
+   "correct": 11,
+   "scoreable": 11,
+   "latency_s": 41.249338343999625,
+   "raw_output": "{\"invoice_number\":\"2728-892\",\"purchase_order_number\":null,\"invoice_date\":\"2020-01-25\",\"due_date\":\"2019-10-07\",\"vendor\":{\"name\":\"Faulkner LLC\",\"address\":\"841 Marshall Knolls, Timothystad, SC 63653 US\",\"email\":null,\"website\":null},\"buyer\":{\"name\":\"Stefanie Soto\",\"address\":\"789 Melissa Mountains Suite 364, Randychester, SD 84623 US\"},\"currency\":\"USD\",\"subtotal\":null,\"discount\":10.84,\"tax\":null,\"total_amount\":544.42,\"amount_due\":null,\"payment_terms\":\"will be charged if payment is not made within the due date.\",\"line_items\":null}"
+  },
+  {
+   "doc_id": "Template14_Instance174",
+   "valid": true,
+   "correct": 11,
+   "scoreable": 11,
+   "latency_s": 47.37339177600006,
+   "raw_output": "{\"invoice_number\":\"INV98921338\",\"purchase_order_number\":null,\"invoice_date\":\"2019-09-30\",\"due_date\":\"2015-11-14\",\"vendor\":{\"name\":\"Faulkner LLC\",\"address\":\"841 Marshall Knolls, Timothystad, SC 63653 US\",\"email\":null,\"website\":null},\"buyer\":{\"name\":\"Jeremiah Cortez\",\"address\":\"9140 Christina Fall, New Edwardchester, VI 65477 US\"},\"currency\":\"EUR\",\"subtotal\":null,\"discount\":15.73,\"tax\":null,\"total_amount\":639.77,\"amount_due\":null,\"payment_terms\":\"1. Please send payment within 8 days of receiving this invoice., There will be a 2.5% interest charge per month on late invoices., 2. Please include the Invoice number in your payment notes.\",\"line_items\":null}"
+  },
+  {
+   "doc_id": "Template14_Instance189",
+   "valid": true,
+   "correct": 11,
+   "scoreable": 11,
+   "latency_s": 47.19271467100043,
+   "raw_output": "{\"invoice_number\":\"2Y4M4d-176\",\"purchase_order_number\":null,\"invoice_date\":\"2022-11-05\",\"due_date\":\"1999-08-12\",\"vendor\":{\"name\":\"Faulkner LLC\",\"address\":\"841 Marshall Knolls, Timothystad, SC 63653 US\",\"email\":null,\"website\":null},\"buyer\":{\"name\":\"Julia Green\",\"address\":\"094 Corey Shoal, North Erika, CO 96691 US\"},\"currency\":\"EUR\",\"subtotal\":null,\"discount\":5.39,\"tax\":null,\"total_amount\":293.47,\"amount_due\":null,\"payment_terms\":\"1. Please send payment within 8 days of receiving this invoice., There will be a 2.5% interest charge per month on late invoices., 2. Please include the Invoice number in your payment notes.\",\"line_items\":null}"
+  }
+ ]
+}
