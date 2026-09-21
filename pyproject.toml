@@ -17,8 +17,13 @@ dev = [
     "ruff>=0.6",
 ]
 
+# Training (train/train_vlm.py) needs unsloth + a CUDA torch and runs on Colab/Kaggle, never
+# locally; it is deliberately not an optional-dependency group here because unsloth's install
+# is GPU-image specific. `train/colab_train.ipynb` has the install cell. The rest of `train/`
+# (targets, export, smoke) runs on the base dependencies and is tested locally.
+
 [tool.setuptools]
-packages = ["schema", "data", "eval"]
+packages = ["schema", "data", "eval", "train"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -27,6 +32,8 @@ addopts = "-q"
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+# Colab cells are mostly shell magics; not Python to lint.
+extend-exclude = ["*.ipynb"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]

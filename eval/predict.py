@@ -14,10 +14,11 @@
     python -m eval.predict --set test_unseen --input text --model claude-haiku-4-5 \\
         --condition text-small --held-out
 
-    # the tuned adapter behind vLLM (phase 5) through the same harness
+    # the tuned adapter behind vLLM (phase 5) through the same harness, on the prompt it
+    # was trained with: the page and the instruction, no schema and no worked example
     python -m eval.predict --set test_unseen --input image --backend openai \\
         --base-url http://localhost:8000/v1 --model slotfill-lora \\
-        --condition vision-adapter --held-out
+        --condition vision-adapter --no-example --no-schema --held-out
 
 Outputs land in `runs/<condition>/<set>/`: `run_config.json` (model, prompt digest, every
 knob) and `predictions.jsonl` (one line per document). Runs resume: documents already
@@ -28,6 +29,7 @@ changed since it was started is refused rather than silently mixed.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import subprocess
@@ -57,6 +59,7 @@ from eval.datasets import (
 )
 from eval.pages import ImagePart, encode_image
 from eval.prompt import WORKED_EXAMPLE_DOC_ID, InputKind, build_request, prompt_digest, text_part
+from schema.validate import SCHEMA_PATH
 
 RUNS_DIR = Path(__file__).resolve().parent.parent / "runs"
 CONFIG_FILE = "run_config.json"
@@ -81,6 +84,10 @@ def _now() -> str:
     return datetime.now(UTC).isoformat(timespec="seconds")
 
 
+def _schema_digest() -> str:
+    return hashlib.sha256(SCHEMA_PATH.read_bytes()).hexdigest()
+
+
 def _git_commit() -> str | None:
     try:
         return subprocess.run(
@@ -99,12 +106,18 @@ class RunConfig:
     model: str
     prompt_digest: str
     with_example: bool = True
+    #: False for the tuned adapter: no schema in a system prompt, the weights carry it.
+    with_schema: bool = True
     effort: str | None = None
     max_tokens: int = DEFAULT_MAX_TOKENS
     excluded_fields: tuple[str, ...] = ()
     limit: int | None = None
     started_at: str = field(default_factory=_now)
     git_commit: str | None = field(default_factory=_git_commit)
+    #: The schema text is inside `prompt_digest` (the system prompt embeds it), so a schema
+    #: edit moves that digest too. Recording the schema's own digest says which of the two
+    #: changed. Older run configs predate this field and load as None.
+    schema_digest: str | None = field(default_factory=lambda: _schema_digest())
 
     def identity(self) -> dict[str, Any]:
         return {key: getattr(self, key) for key in _IDENTITY_KEYS}
@@ -116,6 +129,8 @@ class RunConfig:
     def from_json(cls, text: str) -> RunConfig:
         payload = json.loads(text)
         payload["excluded_fields"] = tuple(payload.get("excluded_fields", ()))
+        # A run written before this field existed did not record its schema; say so.
+        payload.setdefault("schema_digest", None)
         return cls(**payload)
 
 
@@ -195,6 +210,7 @@ def predict_item(
         input_kind=config.input_kind,  # type: ignore[arg-type]
         example_image=example_image,
         with_example=config.with_example,
+        with_schema=config.with_schema,
         effort=config.effort,
         max_tokens=config.max_tokens,
     )
@@ -374,6 +390,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--effort", choices=("low", "medium", "high", "xhigh", "max"))
     parser.add_argument("--max-tokens", type=int, default=DEFAULT_MAX_TOKENS)
     parser.add_argument("--no-example", action="store_true", help="drop the worked example")
+    parser.add_argument(
+        "--no-schema",
+        action="store_true",
+        help="drop the system prompt too; with --no-example this is the tuned adapter's prompt",
+    )
     parser.add_argument("--no-cache", action="store_true", help="disable prompt caching")
     parser.add_argument("--limit", type=int, help="only the first N documents (dev iteration)")
     parser.add_argument("--concurrency", type=int, default=DEFAULT_CONCURRENCY)
@@ -406,8 +427,11 @@ def main(argv: list[str] | None = None) -> int:
         input_kind=input_kind,
         backend=args.backend,
         model=args.model,
-        prompt_digest=prompt_digest(input_kind, with_example=not args.no_example),
+        prompt_digest=prompt_digest(
+            input_kind, with_example=not args.no_example, with_schema=not args.no_schema
+        ),
         with_example=not args.no_example,
+        with_schema=not args.no_schema,
         effort=args.effort,
         max_tokens=args.max_tokens,
         excluded_fields=tuple(sorted(excluded_fields_for(args.eval_set, input_kind))),

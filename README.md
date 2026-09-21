@@ -17,6 +17,10 @@ the prompt is a valid and expected outcome. Full plan: [`docs/plan.md`](docs/pla
 > output, full token budget burned on hidden reasoning). The real held-out run (`test_seen`
 > + `test_unseen` + `rvlcdip`, ~1,170 documents) has not happened yet, so there are no
 > ship-gate numbers to report. The table below is empty on purpose.
+>
+> Phase 3 (LoRA training) code is in place: training targets, the exportable data bundle,
+> the Unsloth script and its Colab notebook, and the data-mix ablation split. No adapter
+> has been trained yet; see [Training the adapter](#training-the-adapter).
 
 ## The answer
 
@@ -66,6 +70,23 @@ bare exception. It tolerates a markdown fence around model output and nothing el
 around the JSON is counted as a failure rather than salvaged, because "the model chatted at
 us" is a failure mode the eval needs to be able to count.
 
+One field carries two kinds of "nothing". `line_items` is `[]` when a line table was looked
+for and not found, and `null` when the extractor does not produce line items at all. The
+distinction exists because no dataset in this project annotates line items (see below), so
+the tuned adapter cannot learn them and is trained to say `null` - an abstention - rather
+than `[]`, which would claim on every FATURA page that a table it plainly has is absent.
+The prompted baseline reads the table and fills the array; the adapter declines. Both are
+schema-valid, and neither is scored on it.
+
+`null` was added to `line_items` after the frontier baseline had run on the held-out sets.
+Because the system prompt embeds the schema text, this moved the baseline's prompt digest,
+so those runs are closed: they cannot be resumed under their recorded digest, only rerun
+under a new one. It did not move a number. Re-validating every stored baseline output under
+the relaxed schema gives the same verdict on all 1,083 documents (350/350, 298/300 and
+431/433 valid), no valid output had `line_items: null`, and every invalid one is a JSON
+parse failure or an empty reply. Run configs now record a `schema_digest` alongside the
+prompt digest so a future schema edit is visible as such.
+
 ## The split
 
 Splitting by document would put images from the same template in both train and test, and
@@ -79,6 +100,7 @@ the **layout id**.
 | `test_seen` | 35 | 350 | **yes** | same layouts as train, disjoint documents |
 | `test_unseen` | 10 | 300 | **yes** | the 10 held-out layouts |
 | RVL-CDIP | n/a | 520 | **yes** | real scans, zero-shot, shared fields only |
+| `train_4k` | 35 | 4,025 | no | data-mix ablation: `train` plus 65 more documents per layout, same layouts, disjoint from every eval set |
 
 FATURA ships `Strat2_Split.txt`, a 40/10 inter-template split - but it sets
 `test_inds = dev_inds`, so its dev set *is* its test set. Iterating a prompt against that
@@ -361,6 +383,77 @@ evaluator prints a per-field *text-layer ceiling* - the share of reference value
 in the input text at all - next to the text-path accuracy. The text path cannot beat it,
 and reading Path A numbers without it would blame the model for the input.
 
+## Training the adapter
+
+Phase 3. The local GPU (4GB) cannot fine-tune a 3B vision model, so the split between
+machines is explicit: everything deterministic happens here and is tested; the training
+loop runs on Colab/Kaggle from a bundle this repo produces.
+
+```bash
+python -m train.export        # data/interim/slotfill-bundle/ + slotfill-bundle.tar.gz (~135 MB)
+```
+
+The bundle holds every page image once (4,025 of them: `train` is a subset of `train_4k`),
+one `<split>.jsonl` per split, and a `bundle.json` with a SHA-256 digest per split.
+`dev_unseen` travels too, marked `trainable: false`, for the post-training smoke test; the
+GPU side refuses to train on it, and refuses to export a frozen set at all.
+
+### What the model learns to say
+
+The target for a page is the **full schema record as one compact JSON string**
+([`train/targets.py`](train/targets.py)). Two rules bridge the mapper's partial record to
+the schema's required-everything contract, and both are checked rather than assumed:
+
+- **An unannotated field is `null`.** FATURA annotates every field its template prints: 34
+  of the 35 training layouts have exactly one supervised field set across all 50 of their
+  documents, and the 35th (layout 40) differs on a single document that lacks a `DUE_DATE`
+  annotation (`python -m train.target_report`; the same holds over `train_4k`). "Not
+  annotated" is therefore "not printed", and `null` is the schema's word for exactly that.
+  This is a label the dataset wrote, not one we filled in.
+- **`line_items` is `null`**, never `[]` - see [The schema](#the-schema).
+
+Every target is validated against the schema at export time; a mapper bug cannot reach the
+model. Keys are emitted in schema order and the JSON is compact, because output tokens are
+what the adapter's cost per invoice is made of and formatting is invisible to the scorer.
+
+The prompt is the page image followed by one fixed sentence,
+`Extract the fields from this invoice page. Reply with the JSON object only.` - **no schema,
+no worked example**. The schema goes into the weights; that is the cost argument in one
+line. The adapter is evaluated through the same harness on exactly this prompt
+(`eval/predict.py --no-example --no-schema`), and the run config records a distinct prompt
+digest for it.
+
+### The run
+
+[`train/train_vlm.py`](train/train_vlm.py), via [`train/colab_train.ipynb`](train/colab_train.ipynb)
+(one notebook, `PLATFORM = 'colab' | 'kaggle'`; the two runs are deliberately split across the
+two free tiers so both are covered):
+Unsloth vision LoRA on `Qwen2.5-VL-3B-Instruct` loaded in 4-bit, starting from the plan's
+knobs (`r=16, alpha=16, lr=2e-4`, 1 epoch, seed 3407), loss on the assistant turn only.
+Vision layers are frozen by default: vLLM's LoRA support for multimodal models covers the
+language model, and an adapter that cannot be served is not a result. Each run writes:
+
+| File | Contents |
+|---|---|
+| `adapter/` | LoRA weights and `adapter_config.json`, loadable by vLLM `--enable-lora` |
+| `run_config.json` | every knob, the base model, the **dataset digest** from the bundle, library versions, GPU, wall-clock training time |
+| `smoke.json` | schema validity and field accuracy on 20 `dev_unseen` pages - enough to tell a working adapter from a broken run before spending a held-out evaluation on it |
+| `train_log.json` | the trainer's loss curve. It lives here and nowhere else: training loss is never a headline result |
+| `trainer/checkpoint-N/` | a checkpoint every 50 optimizer steps; rerunning with the same `--out` resumes from the latest. Free Colab reclaims sessions and Kaggle wipes the disk on a crash, so `--out` lives on Drive or in Kaggle's saved output. Delete once the adapter is saved |
+
+The digest chain is deliberate: `bundle.json` names the exact examples, `run_config.json`
+copies that digest, and the held-out run's own `run_config.json` names the model. A
+number in the ship-gate table can be traced back to the documents it was trained on.
+
+**The ablation is data mix**, the one the plan calls more interesting for this dataset:
+the same knobs on `train` (1,750 documents) and `train_4k` (4,025 documents, the same 35
+layouts). More documents on the same templates either buys generalisation to the 10 unseen
+layouts or it buys memorisation that `test_seen` will reward and `test_unseen` will not;
+the two eval sets are what tell those apart. Reported as held-out metrics, never as loss.
+
+Adapter weights are not committed. Their `run_config.json`, `smoke.json` and
+`train_log.json` are, under `runs/train/<adapter>/`, as evidence.
+
 ## Limitations
 
 - Training data is **synthetic**. FATURA's content is generated, its layouts are clean, and
@@ -391,6 +484,12 @@ data/      download.py, sources.py            fetch + provenance
            split.py, build_splits.py          layout-id split
            splits/*.json                      frozen manifests (committed)
            mapping_report.py                  generates the table above
+train/     targets.py                         mapped record -> full schema record; leak guard
+           target_report.py                   the "unannotated = not printed" measurement
+           export.py                          images + targets -> self-describing bundle
+           train_vlm.py                       Unsloth vision LoRA; run_config.json, smoke.json
+           smoke.py                           post-training check on dev_unseen pages
+           colab_train.ipynb                  thin notebook around train_vlm.py
 eval/      predict.py                         run one condition on one set; resumable
            evaluate.py                        a run -> metrics.json + ship-gate row
            prompt.py                          schema prompt + the worked example
@@ -398,7 +497,9 @@ eval/      predict.py                         run one condition on one set; resu
            backends.py                        Anthropic SDK / OpenAI-compatible (vLLM)
            datasets.py, pages.py, pricing.py  eval items, image encoding, published prices
 runs/      <condition>/<set>/                 run_config.json, predictions.jsonl, metrics.json
-tests/                                        schema, mappers, split, scorer, harness
+           train/<adapter>/                   run_config.json, smoke.json, train_log.json
+adapters/  <adapter>/adapter/                 LoRA weights (gitignored)
+tests/                                        schema, mappers, split, scorer, harness, targets
 ```
 
 ## Citations

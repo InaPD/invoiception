@@ -11,11 +11,13 @@ import json
 import pytest
 
 from data.split import (
+    ABLATION_DOCS_PER_LAYOUT,
     DEV_LAYOUTS,
     FROZEN_SPLITS,
     HELD_OUT_LAYOUTS,
     TRAIN_LAYOUTS,
     Split,
+    build_ablation_split,
     build_splits,
     load_manifest,
     manifest_digest,
@@ -172,3 +174,39 @@ class TestLayoutIdSafety:
         without_layout_3 = [d for d in ALL_DOCS if not d.startswith("Template3_")]
         with pytest.raises(ValueError, match="3"):
             build_splits(without_layout_3)
+
+
+class TestAblationSplit:
+    """The data-mix ablation trains on ~4,000 documents from the *same* 35 layouts. It may
+    add documents; it may never add a layout, touch a frozen set, or drop a training doc."""
+
+    @pytest.fixture
+    def large(self, splits):
+        return build_ablation_split(ALL_DOCS, splits)
+
+    def test_is_a_superset_of_train(self, splits, large):
+        assert set(splits["train"].doc_ids) <= set(large.doc_ids)
+
+    def test_uses_exactly_the_training_layouts(self, splits, large):
+        assert large.layouts == splits["train"].layouts
+        assert {int(d.split("_")[0][len("Template") :]) for d in large.doc_ids} == set(
+            TRAIN_LAYOUTS
+        )
+
+    def test_is_disjoint_from_every_eval_set(self, splits, large):
+        for name in ("dev_unseen", "test_seen", "test_unseen"):
+            assert not set(large.doc_ids) & set(splits[name].doc_ids), name
+
+    def test_lands_near_four_thousand_documents_evenly_stratified(self, large):
+        assert 3800 <= len(large.doc_ids) <= 4200
+        counts = {
+            layout: sum(1 for d in large.doc_ids if d.startswith(f"Template{layout}_"))
+            for layout in large.layouts
+        }
+        assert set(counts.values()) == {ABLATION_DOCS_PER_LAYOUT}
+
+    def test_is_named_open_and_deterministic(self, splits, large):
+        assert large.name == "train_4k"
+        assert large.frozen is False
+        assert list(large.doc_ids) == sorted(large.doc_ids)
+        assert build_ablation_split(list(reversed(ALL_DOCS)), splits) == large

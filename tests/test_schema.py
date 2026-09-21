@@ -42,12 +42,14 @@ class TestValidateRecord:
         assert outcome.ok
         assert outcome.errors == []
 
-    def test_accepts_all_nulls_except_line_items(self, valid_record):
+    def test_accepts_all_nulls(self, valid_record):
         record = dict.fromkeys(valid_record)
         record["vendor"] = {"name": None, "address": None, "email": None, "website": None}
         record["buyer"] = {"name": None, "address": None}
-        record["line_items"] = []
         assert validate_record(record).ok
+
+    def test_accepts_an_empty_line_table(self, mutate):
+        assert validate_record(mutate(line_items=[])).ok
 
     def test_rejects_unknown_top_level_field(self, mutate):
         outcome = validate_record(mutate(vendor_vat_number="GB123"))
@@ -83,8 +85,11 @@ class TestValidateRecord:
             "an empty string is a silent pass pretending to be an answer; null is the honest value"
         )
 
-    def test_rejects_line_items_as_null(self, mutate):
-        assert not validate_record(mutate(line_items=None)).ok
+    def test_accepts_line_items_as_null(self, mutate):
+        """null is 'this extractor does not produce line items' - the tuned adapter's honest
+        answer, since no training dataset annotates them. [] means a table was looked for
+        and not found; the two are different claims and the schema keeps both."""
+        assert validate_record(mutate(line_items=None)).ok
 
     def test_errors_carry_a_json_path(self, mutate):
         outcome = validate_record(mutate(total_amount="1440.00"))

@@ -157,22 +157,32 @@ def build_request(
     input_kind: InputKind,
     example_image: ImagePart | None = None,
     with_example: bool = True,
+    with_schema: bool = True,
     effort: str | None = None,
     max_tokens: int = DEFAULT_MAX_TOKENS,
 ) -> Request:
+    """The prompted conditions get the full prompt. The tuned adapter is trained on the
+    page and `INSTRUCTION` alone (`with_example=False, with_schema=False`) - the schema
+    lives in its weights, which is where the cost saving comes from - and is evaluated on
+    exactly what it was trained on."""
     messages: list[Message] = []
     if with_example:
         messages.extend(worked_example(input_kind, image=example_image))
     messages.append(Message("user", (target, TextPart(INSTRUCTION))))
     return Request(
-        system=system_prompt(), messages=tuple(messages), max_tokens=max_tokens, effort=effort
+        system=system_prompt() if with_schema else "",
+        messages=tuple(messages),
+        max_tokens=max_tokens,
+        effort=effort,
     )
 
 
-def prompt_digest(input_kind: InputKind, *, with_example: bool = True) -> str:
+def prompt_digest(
+    input_kind: InputKind, *, with_example: bool = True, with_schema: bool = True
+) -> str:
     """SHA-256 of everything that shapes the prompt, for the run config."""
     payload = {
-        "system": system_prompt(),
+        "system": system_prompt() if with_schema else None,
         "instruction": INSTRUCTION,
         "input_kind": input_kind,
         "example": (

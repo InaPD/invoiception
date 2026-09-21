@@ -195,3 +195,27 @@ def test_openai_compatible_without_a_total_tokens_field_assumes_no_hidden_gap():
     )
     completion = OpenAICompatibleBackend("adapter", client=_FakeOpenAI(response)).complete(REQUEST)
     assert completion.usage == Usage(100, 20)
+
+
+MINIMAL_REQUEST = Request(system="", messages=(Message("user", (IMAGE, TextPart("extract"))),))
+
+
+def test_openai_compatible_omits_an_empty_system_message():
+    """An empty system message is not 'no system prompt': the server's chat template would
+    render an empty system turn, which the adapter never saw in training."""
+    response = SimpleNamespace(
+        choices=[SimpleNamespace(message=SimpleNamespace(content="{}"), finish_reason="stop")],
+        usage=SimpleNamespace(prompt_tokens=10, completion_tokens=1, total_tokens=11),
+        model="adapter",
+        id="chatcmpl-2",
+    )
+    fake = _FakeOpenAI(response)
+    OpenAICompatibleBackend("adapter", client=fake).complete(MINIMAL_REQUEST)
+    roles = [m["role"] for m in fake.calls[0]["messages"]]
+    assert roles == ["user"]
+
+
+def test_anthropic_omits_an_empty_system_prompt():
+    fake = _FakeAnthropic(_anthropic_response())
+    AnthropicBackend("claude", client=fake).complete(MINIMAL_REQUEST)
+    assert "system" not in fake.calls[0]

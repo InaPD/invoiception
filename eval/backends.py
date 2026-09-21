@@ -153,9 +153,11 @@ class AnthropicBackend:
         kwargs: dict[str, Any] = {
             "model": self.model,
             "max_tokens": request.max_tokens,
-            "system": system,
             "messages": messages,
         }
+        # An empty system prompt is *no* system prompt (the adapter's minimal prompt).
+        if request.system:
+            kwargs["system"] = system
         if request.effort:
             kwargs["output_config"] = {"effort": request.effort}
         return kwargs
@@ -226,7 +228,9 @@ class OpenAICompatibleBackend:
         return blocks
 
     def build_kwargs(self, request: Request) -> dict[str, Any]:
-        messages: list[dict[str, Any]] = [{"role": "system", "content": request.system}]
+        messages: list[dict[str, Any]] = []
+        if request.system:
+            messages.append({"role": "system", "content": request.system})
         messages.extend(
             {"role": message.role, "content": self._parts(message.parts)}
             for message in request.messages

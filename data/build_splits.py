@@ -14,7 +14,14 @@ from pathlib import Path
 
 from data.download import RAW_DIR
 from data.sources import FATURA
-from data.split import SPLIT_DIR, build_splits, manifest_digest, write_manifests
+from data.split import (
+    ABLATION_SPLIT,
+    SPLIT_DIR,
+    build_ablation_split,
+    build_splits,
+    manifest_digest,
+    write_manifests,
+)
 
 ANNOTATION_PREFIX = "invoices_dataset_final/Annotations/Original_Format/"
 
@@ -36,6 +43,7 @@ def main() -> int:
 
     doc_ids = fatura_doc_ids(archive)
     splits = build_splits(doc_ids)
+    splits = {**splits, ABLATION_SPLIT: build_ablation_split(doc_ids, splits)}
     write_manifests(splits, SPLIT_DIR)
 
     print(f"{len(doc_ids)} documents, {len(splits)} splits written to {SPLIT_DIR}")
