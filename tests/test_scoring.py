@@ -326,3 +326,34 @@ def test_score_rvlcdip_invalid_output_is_wrong_everywhere_scoreable():
     score = score_rvlcdip("d", "not json", ref)
     assert score.valid is False
     assert score.fields == {"vendor.name": False, "vendor.address": False, "total_amount": False}
+
+
+class TestGroundingIgnoresPunctuation:
+    """RVL-CDIP containment asks 'is this value in this block of OCR text', and OCR
+    hyphenation and spacing are arbitrary. A punctuation difference is not a wrong answer.
+
+    This leniency is deliberately confined to region containment. FATURA has real field
+    values and is still compared strictly, so a wrong answer there cannot pass as right.
+    """
+
+    def test_spacing_around_a_hyphen_does_not_decide_correctness(self):
+        region = "To Philip Morris-USA Research Center Attn: Richard Carchman"
+        assert text_contains(region, "buyer.name", "Philip Morris -USA Research Center")
+        assert text_contains(region, "buyer.name", "Philip Morris - USA Research Center")
+
+    def test_other_punctuation_and_stray_periods_are_ignored_too(self):
+        region = "COYNE BEAHM, INC. 1000 E. HANES MILL RD."
+        assert text_contains(region, "vendor.name", "Coyne Beahm Inc")
+        assert text_contains(region, "vendor.address", "1000 E HANES MILL RD")
+
+    def test_a_genuinely_different_value_still_fails(self):
+        region = "To Philip Morris-USA Research Center"
+        assert not text_contains(region, "buyer.name", "Philip Morris Europe")
+        assert not text_contains(region, "buyer.name", "R.J. Reynolds")
+
+    def test_a_misread_character_still_fails(self):
+        """The OCR ceiling is counted, not corrected: this is not fuzzy matching."""
+        assert not text_contains("BALANCE DUE 1500.00", "invoice_number", "I5UO")
+
+    def test_fatura_field_comparison_stays_strict(self):
+        assert not values_match("buyer.name", "Philip Morris-USA", "Philip Morris USA")

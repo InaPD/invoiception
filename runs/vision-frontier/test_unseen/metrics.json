@@ -155,6 +155,8 @@
  "mean_output_tokens": 431.66333333333336,
  "mean_cache_read_tokens": 0.0,
  "cost_per_1k_usd": 4.9517375,
+ "gpu_wall_clock_s": null,
+ "throughput_docs_per_hour": null,
  "text_layer_ceiling": null,
  "truncated_outputs": 2,
  "config": {
@@ -165,11 +167,13 @@
   "model": "gemini-3.8-flash",
   "prompt_digest": "00d34abc620f54922e16f1b3e09efbc2e89ec0fe11b38a6365e070d43c2a428e",
   "with_example": true,
+  "with_schema": true,
   "effort": null,
   "max_tokens": 16000,
   "excluded_fields": [],
   "limit": null,
   "started_at": "2026-09-18T22:01:59+00:00",
-  "git_commit": "31d4019"
+  "git_commit": "31d4019",
+  "schema_digest": null
  }
 }

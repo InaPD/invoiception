@@ -32,6 +32,9 @@ It fails on the two things an accounting import actually needs:
 - **Schema compliance on real documents.** On the RVL-CDIP scans the adapter returns
   **80.6% valid JSON against the baseline's 99.5%**. Nearly one in five real invoices comes
   back as a structured error. That is precisely the failure this project set out to prevent.
+  Note what this is *not*: among the outputs that do validate, the adapter grounds slightly
+  better than the baseline (56.4% against 54.8%). The problem is the envelope, not the
+  reading.
 
 The honest reading of the cost column is that it is a **floor**, not a forecast: $0.17 per
 1,000 assumes the GPU is busy every second it is rented. Break-even against the API is
@@ -65,16 +68,17 @@ every field.
 |---|---|---|---|---|---|---|---|
 | Prompted frontier (Gemini 3.8 Flash) | FATURA seen layouts | 350 | 100.0% | 99.0% | 90.9% | $4.86 | - |
 | Prompted frontier (Gemini 3.8 Flash) | FATURA **unseen** layouts | 300 | 99.3% | 98.9% | **95.0%** | $4.95 | - |
-| Prompted frontier (Gemini 3.8 Flash) | RVL-CDIP (real scans) | 433 | **99.5%** | 50.4% | n/a | $18.65 | - |
+| Prompted frontier (Gemini 3.8 Flash) | RVL-CDIP (real scans) | 433 | **99.5%** | 54.4% | n/a | $18.65 | - |
 | Tuned adapter (Qwen2.5-VL-3B, r=16) | FATURA seen layouts | 350 | 99.4% | 97.8% | 83.7% | $0.16 | 2,211/h |
 | Tuned adapter (Qwen2.5-VL-3B, r=16) | FATURA **unseen** layouts | 300 | 100.0% | 96.2% | 65.0% | **$0.17** | 2,118/h |
-| Tuned adapter (Qwen2.5-VL-3B, r=16) | RVL-CDIP (real scans) | 433 | **80.6%** | 40.0% | n/a | $0.21 | 1,683/h |
+| Tuned adapter (Qwen2.5-VL-3B, r=16) | RVL-CDIP (real scans) | 433 | **80.6%** | 43.4% | n/a | $0.21 | 1,683/h |
 
 RVL-CDIP has no field values, only region boxes, so it scores **grounding** (is the
 predicted value inside the right annotated region?) and has no exact-match column; a null
 prediction there is an abstention, excluded from the denominator. Among *valid* outputs the
-two conditions ground equally well (52.0% adapter, 50.7% baseline) - the adapter's deficit
-on that set is entirely schema compliance, not reading.
+two conditions ground equally well (**56.4% adapter, 54.8% baseline**) - the adapter's
+deficit on that set is entirely schema compliance, not reading. And both of those numbers
+are floors; see [why the RVL-CDIP column is a floor](#why-the-rvl-cdip-column-is-a-floor).
 
 **Reading the cost column.** The baseline's is measured tokens x published prices. The
 adapter's is a rented T4 at $0.35/hour divided by measured throughput, which assumes 100%
@@ -159,7 +163,7 @@ the **layout id**.
 | `dev_unseen` | 5 | 200 | no | prompt iteration on unseen layouts |
 | `test_seen` | 35 | 350 | **yes** | same layouts as train, disjoint documents |
 | `test_unseen` | 10 | 300 | **yes** | the 10 held-out layouts |
-| RVL-CDIP | n/a | 520 | **yes** | real scans, zero-shot, shared fields only |
+| RVL-CDIP | n/a | 433 | **yes** | real scans, zero-shot, shared fields only. 433 of the 520 available, frozen in `data/splits/rvlcdip_sample.json` when a budget constraint cut the first run short, so every later condition scores the same documents |
 | `train_4k` | 35 | 4,025 | no | data-mix ablation: `train` plus 65 more documents per layout, same layouts, disjoint from every eval set |
 
 FATURA ships `Strat2_Split.txt`, a 40/10 inter-template split - but it sets
@@ -591,6 +595,54 @@ text; they are structural drift, categorised from the raw outputs:
 Every one of those is a decoding-time constraint away from being impossible, which is why
 constrained decoding is the named next experiment rather than more training data.
 
+### Why the RVL-CDIP column is a floor
+
+Roughly 55% grounding looks alarming next to 99% on FATURA, and most of the gap is the
+ground truth rather than the models. RVL-CDIP has no field values: a prediction is scored
+by whether it appears inside the right annotated region of an **ABBYY OCR pass over
+1970s-90s microfilm, median per-word confidence 0.51**. When the OCR is wrong, a correct
+answer scores wrong.
+
+That is easy to assert and harder to measure without inventing labels, so
+[`eval/agreement.py`](eval/agreement.py) bounds it using the two conditions as independent
+witnesses: field instances where **both produced the identical value and both were marked
+wrong**. Two different models agreeing character for character is unlikely to be a shared
+hallucination.
+
+```
+1,313 field instances where both conditions returned the same value
+      869 scored correct, 444 scored wrong
+
+Of the ones scored wrong:
+  194 (43.7%)  no resemblance: region lacks the value
+  160 (36.0%)  value present, OCR garbled a few characters
+   90 (20.3%)  value present, heavier OCR damage
+```
+
+So **at least 250 of those 444** have the agreed value sitting in the region in damaged
+form - the models read the page and the ground truth could not confirm it. Examples, taken
+verbatim from the run:
+
+| Both models answered | Region OCR says |
+|---|---|
+| `PHILIP MORRIS INCORP.` | `To PHII IP MORRIS INCORP. 120 PARK AVENUE` |
+| `2001-10-19` | `InvoJco Number: 59276-1 Dafo: October 19. 9001` |
+| `6800.0` | `90 Days 120 Days BALANCE DUE Ar800.00` |
+| `1991-06-13` | `PURCHASE ORDER NO. DATE 1470 06 13 j 91 TERMS` |
+
+The remaining 44% ("no resemblance") is genuinely ambiguous: the OCR pass routinely drops
+letterheads and logos, which is exactly where `vendor.name` is printed, so some of it is
+the same problem - and some of it is both models being wrong. The analysis deliberately
+stops there rather than crediting itself a corrected score.
+
+**One real scorer bug came out of this.** 5% of the agreed-and-wrong cases differed from
+the region text only in punctuation or spacing (`Philip Morris-USA` vs `Philip Morris -USA`).
+Region containment now compares alphanumeric skeletons, which moved both conditions up by
+the same ~3-4 points (baseline 50.4% -> 54.4%, adapter 40.0% -> 43.4%). The leniency is
+confined to RVL-CDIP containment; FATURA, which has real field values, is still compared
+strictly, and its numbers did not move. The runs were not repeated - the raw outputs are
+committed, so every condition was simply re-scored with the fixed rule.
+
 ## Limitations
 
 - The adapter's headline weakness is **character-level transcription**, and no amount of
@@ -606,7 +658,10 @@ constrained decoding is the named next experiment rather than more training data
 - Training data is **synthetic**. FATURA's content is generated, its layouts are clean, and
   its dates are internally inconsistent (due dates frequently precede invoice dates). Expect
   RVL-CDIP numbers visibly below FATURA held-out numbers; that gap is a finding, not a bug.
-- The real-document test set is **520 scans of one narrow domain** (tobacco litigation
+- The RVL-CDIP grounding numbers are **floors, not accuracy estimates**, for the reasons
+  measured above. They are comparable *between* conditions, which is what the ship-gate
+  table uses them for, and should not be read as "the model got half the fields right".
+- The real-document test set is **433 scans of one narrow domain** (tobacco litigation
   archives), with poor OCR, and it can only score grounding.
 - **No line item supervision exists** in either dataset.
 - DocILE (6.7k real annotated invoice-like documents with an unseen-layout test split) is
@@ -638,6 +693,7 @@ train/     targets.py                         mapped record -> full schema recor
            smoke.py                           post-training check on dev_unseen pages
            colab_train.ipynb                  thin notebook around train_vlm.py
 eval/      predict.py                         run one condition on one set; resumable
+           agreement.py                       bounds the RVL-CDIP OCR ceiling
            colab_eval.ipynb                   serve the adapter and score the held-out sets
            evaluate.py                        a run -> metrics.json + ship-gate row
            prompt.py                          schema prompt + the worked example

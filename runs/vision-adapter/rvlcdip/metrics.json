@@ -7,20 +7,20 @@
  "n_errors": 0,
  "n_valid": 349,
  "validity_rate": 0.8060046189376443,
- "field_accuracy_all": 0.4003853564547206,
- "field_accuracy_valid": 0.52002002002002,
+ "field_accuracy_all": 0.43391136801541424,
+ "field_accuracy_valid": 0.5635635635635635,
  "exact_match_all": null,
  "exact_match_valid": null,
  "abstain_rate": 0.167201540436457,
  "per_field": {
   "invoice_number": {
    "scoreable": 401,
-   "correct": 169,
-   "wrong": 133,
+   "correct": 175,
+   "wrong": 127,
    "invalid": 79,
    "abstained": 20,
-   "accuracy_all": 0.4435695538057743,
-   "accuracy_valid": 0.5596026490066225
+   "accuracy_all": 0.45931758530183725,
+   "accuracy_valid": 0.5794701986754967
   },
   "invoice_date": {
    "scoreable": 401,
@@ -42,39 +42,39 @@
   },
   "vendor.name": {
    "scoreable": 406,
-   "correct": 146,
-   "wrong": 135,
+   "correct": 164,
+   "wrong": 117,
    "invalid": 79,
    "abstained": 46,
-   "accuracy_all": 0.40555555555555556,
-   "accuracy_valid": 0.5195729537366548
+   "accuracy_all": 0.45555555555555555,
+   "accuracy_valid": 0.5836298932384342
   },
   "vendor.address": {
    "scoreable": 406,
-   "correct": 33,
-   "wrong": 205,
+   "correct": 63,
+   "wrong": 175,
    "invalid": 79,
    "abstained": 89,
-   "accuracy_all": 0.10410094637223975,
-   "accuracy_valid": 0.13865546218487396
+   "accuracy_all": 0.19873817034700317,
+   "accuracy_valid": 0.2647058823529412
   },
   "buyer.name": {
    "scoreable": 391,
-   "correct": 218,
-   "wrong": 98,
+   "correct": 226,
+   "wrong": 90,
    "invalid": 69,
    "abstained": 6,
-   "accuracy_all": 0.5662337662337662,
-   "accuracy_valid": 0.689873417721519
+   "accuracy_all": 0.587012987012987,
+   "accuracy_valid": 0.7151898734177216
   },
   "buyer.address": {
    "scoreable": 391,
-   "correct": 136,
-   "wrong": 156,
+   "correct": 161,
+   "wrong": 131,
    "invalid": 69,
    "abstained": 30,
-   "accuracy_all": 0.3767313019390582,
-   "accuracy_valid": 0.4657534246575342
+   "accuracy_all": 0.44598337950138506,
+   "accuracy_valid": 0.5513698630136986
   },
   "total_amount": {
    "scoreable": 319,
