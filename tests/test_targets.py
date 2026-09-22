@@ -156,3 +156,19 @@ class TestLeakGuard:
 
     def test_accepts_a_clean_training_split(self):
         guard_training_split(Split("train", frozenset({1}), ("Template1_Instance1",), False))
+
+
+def test_a_training_target_scores_perfectly_against_its_own_reference(mapped):
+    """The bridge between what the adapter is taught and how it is graded.
+
+    If `train/targets.py` and `eval/scoring.py` ever drift apart - a normalisation on one
+    side only, a field completed differently - a perfect adapter would be marked wrong and
+    the ship-gate table would understate it. Echoing the target back must score 100%.
+    """
+    from eval.scoring import score_fatura
+
+    score = score_fatura(mapped.doc_id, target_json(training_target(mapped)), mapped)
+    assert score.valid
+    assert score.fields, "the fixture must supervise something for this to mean anything"
+    assert all(score.fields.values()), [f for f, ok in score.fields.items() if not ok]
+    assert score.exact

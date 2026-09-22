@@ -316,3 +316,30 @@ def test_run_config_records_the_schema_digest_and_older_configs_load_as_none():
     del payload["schema_digest"]
     assert RunConfig.from_json(json.dumps(payload)).schema_digest is None
     assert RunConfig.from_json(config.to_json()) == config
+
+
+class TestSessionLog:
+    """Self-hosted cost is GPU time / documents, so the run must measure its own wall clock."""
+
+    def test_a_session_is_appended_per_run(self, tmp_path):
+        from eval.predict import SESSIONS_FILE, Session, load_sessions, record_session
+
+        record_session(tmp_path, Session("2026-09-22T10:00:00+00:00", 120.0, 100, 16))
+        record_session(tmp_path, Session("2026-09-22T11:00:00+00:00", 60.0, 40, 16))
+        assert (tmp_path / SESSIONS_FILE).exists()
+        sessions = load_sessions(tmp_path)
+        assert [s.n_predicted for s in sessions] == [100, 40]
+        assert sum(s.wall_clock_s for s in sessions) == 180.0
+
+    def test_no_session_file_means_no_sessions(self, tmp_path):
+        from eval.predict import load_sessions
+
+        assert load_sessions(tmp_path) == []
+
+    def test_a_session_that_predicted_nothing_is_not_recorded(self, tmp_path):
+        """A resumed run with everything already done adds wall clock but no work; counting
+        it would make the throughput number worse every time someone re-checks a finished run."""
+        from eval.predict import SESSIONS_FILE, Session, record_session
+
+        record_session(tmp_path, Session("2026-09-22T10:00:00+00:00", 3.0, 0, 16))
+        assert not (tmp_path / SESSIONS_FILE).exists()

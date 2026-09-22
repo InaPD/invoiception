@@ -18,9 +18,14 @@ the prompt is a valid and expected outcome. Full plan: [`docs/plan.md`](docs/pla
 > + `test_unseen` + `rvlcdip`, ~1,170 documents) has not happened yet, so there are no
 > ship-gate numbers to report. The table below is empty on purpose.
 >
-> Phase 3 (LoRA training) code is in place: training targets, the exportable data bundle,
-> the Unsloth script and its Colab notebook, and the data-mix ablation split. No adapter
-> has been trained yet; see [Training the adapter](#training-the-adapter).
+> **Phase 3 done: the first adapter is trained.** Qwen2.5-VL-3B, LoRA r=16, one epoch over
+> 1,750 FATURA pages, 81 minutes on a free Colab T4
+> ([`runs/train/qwen25vl3b-r16-train/`](runs/train/qwen25vl3b-r16-train/)). On a 20-page
+> smoke test over unseen layouts it scores **100% schema validity, 98% field accuracy,
+> 80% exact match** - against 0% validity for the untuned base model, which reads the page
+> correctly but answers in its own invented field names. Those are 20 pages of one layout,
+> not a result; the held-out numbers come from phase 4
+> ([Evaluating the adapter](#evaluating-the-adapter)), which is built and not yet run.
 
 ## The answer
 
@@ -454,6 +459,46 @@ the two eval sets are what tell those apart. Reported as held-out metrics, never
 Adapter weights are not committed. Their `run_config.json`, `smoke.json` and
 `train_log.json` are, under `runs/train/<adapter>/`, as evidence.
 
+## Evaluating the adapter
+
+Phase 4. The adapter is scored on the same three frozen sets the frontier baseline was
+scored on, through the same harness, so the two differ on the model and the prompt and
+nothing else.
+
+The serving layer is where "same harness" becomes literal:
+[`serve/serve_vllm.sh`](serve/serve_vllm.sh) starts vLLM with `--enable-lora` and both
+conditions behind one endpoint, and the OpenAI `model` field selects which - base model or
+adapter. `eval/predict.py --backend openai --base-url http://localhost:8000/v1` is the
+same code path that reached Gemini.
+
+```bash
+serve/serve_vllm.sh <adapter dir>          # base + adapter on :8000
+
+python -m eval.predict --set test_unseen --input image \
+    --backend openai --base-url http://localhost:8000/v1 --model slotfill-lora \
+    --condition vision-adapter --no-example --no-schema --max-tokens 1024 --held-out
+
+python -m eval.evaluate --gpu-usd-per-hour 0.35 runs/vision-adapter/test_unseen
+```
+
+`--no-example --no-schema` is not a weaker prompt by accident: it is the prompt the
+adapter was trained on (page image + one sentence), and the run config's prompt digest
+records that it differs from the baseline's. The baseline keeps its schema and worked
+example. That asymmetry is the experiment - the ~1,450 tokens of schema the baseline
+re-sends on every invoice are what the adapter moved into its weights.
+
+**Cost, for a model we host.** There is no published per-token price for it, and borrowing
+one from an API would be a different measurement wearing this one's label. So each run
+records its own wall clock in `sessions.jsonl`, `eval/evaluate.py --gpu-usd-per-hour`
+turns that into `cost / 1k = rate / measured throughput`, and `metrics.json` reports the
+throughput next to it. Without a rate the column reads `-`.
+
+[`eval/colab_eval.ipynb`](eval/colab_eval.ipynb) runs all of this on a free Colab or
+Kaggle GPU. One caveat, stated because it is the likeliest thing to go wrong: a T4 is a
+2018 card with no bfloat16, and vLLM's newer kernels increasingly assume newer hardware.
+The notebook therefore sends a single request before the 1,083-document run, and names a
+paid L4 (a dollar or two) as the fallback rather than pretending the free path is certain.
+
 ## Limitations
 
 - Training data is **synthetic**. FATURA's content is generated, its layouts are clean, and
@@ -491,12 +536,15 @@ train/     targets.py                         mapped record -> full schema recor
            smoke.py                           post-training check on dev_unseen pages
            colab_train.ipynb                  thin notebook around train_vlm.py
 eval/      predict.py                         run one condition on one set; resumable
+           colab_eval.ipynb                   serve the adapter and score the held-out sets
            evaluate.py                        a run -> metrics.json + ship-gate row
            prompt.py                          schema prompt + the worked example
            scoring.py                         per-document field comparison rules
            backends.py                        Anthropic SDK / OpenAI-compatible (vLLM)
            datasets.py, pages.py, pricing.py  eval items, image encoding, published prices
-runs/      <condition>/<set>/                 run_config.json, predictions.jsonl, metrics.json
+serve/     serve_vllm.sh                      vLLM + --enable-lora; model field picks condition
+runs/      <condition>/<set>/                 run_config.json, predictions.jsonl,
+                                              sessions.jsonl, metrics.json
            train/<adapter>/                   run_config.json, smoke.json, train_log.json
 adapters/  <adapter>/adapter/                 LoRA weights (gitignored)
 tests/                                        schema, mappers, split, scorer, harness, targets

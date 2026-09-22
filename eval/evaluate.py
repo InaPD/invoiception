@@ -38,7 +38,15 @@ from typing import Any
 
 from data.map_fatura import MappedRecord
 from eval.datasets import FATURA_SETS, EvalItem, load_eval_set
-from eval.predict import PREDICTIONS_FILE, Prediction, RunConfig, load_config, load_predictions
+from eval.predict import (
+    PREDICTIONS_FILE,
+    Prediction,
+    RunConfig,
+    Session,
+    load_config,
+    load_predictions,
+    load_sessions,
+)
 from eval.pricing import cost_usd
 from eval.scoring import (
     SCORED_FIELDS,
@@ -100,6 +108,9 @@ class Metrics:
     mean_output_tokens: float | None
     mean_cache_read_tokens: float | None
     cost_per_1k_usd: float | None
+    #: Self-hosted only: measured GPU seconds and what they bought.
+    gpu_wall_clock_s: float | None
+    throughput_docs_per_hour: float | None
     text_layer_ceiling: dict[str, float] | None
     truncated_outputs: int
     config: dict[str, Any] = field(default_factory=dict)
@@ -204,6 +215,28 @@ def _exact_match(
     )
 
 
+def throughput_per_hour(wall_clock_s: float, n_predicted: int) -> float | None:
+    """Documents per hour of measured GPU wall clock. The self-hosted throughput number."""
+    if wall_clock_s <= 0 or n_predicted <= 0:
+        return None
+    return n_predicted / (wall_clock_s / 3600)
+
+
+def self_hosted_cost_per_1k(
+    wall_clock_s: float, n_predicted: int, usd_per_hour: float | None
+) -> float | None:
+    """GPU $/hour / measured throughput. None unless a rate and real measured time exist.
+
+    Deliberately not a table lookup: a model we host has no published per-token price, and
+    inventing one from someone else's API rate would be a different measurement wearing
+    this one's label. The rate is passed in by whoever rented the GPU.
+    """
+    rate = throughput_per_hour(wall_clock_s, n_predicted)
+    if rate is None or usd_per_hour is None:
+        return None
+    return usd_per_hour / rate * 1000
+
+
 def _cost_per_1k(model: str, successful: Sequence[Prediction]) -> float | None:
     """Mean measured cost x 1000, or None if any request could not be priced."""
     costs = [cost_usd(model, p.usage) for p in successful if p.usage]
@@ -217,6 +250,9 @@ def aggregate(
     items: Sequence[EvalItem],
     predictions: dict[str, Prediction],
     scores: Sequence[DocScore],
+    *,
+    sessions: Sequence[Session] = (),
+    usd_per_hour: float | None = None,
 ) -> Metrics:
     per_field = _tally(scores)
     overall = _overall(per_field)
@@ -233,6 +269,13 @@ def aggregate(
     ceiling = (
         text_layer_ceiling(items, excluded) if config.input_kind == "text" and has_values else None
     )
+
+    # A published per-token price wins where one exists; a self-hosted model has none, and
+    # its cost is the GPU time this run actually spent divided by what it got through.
+    wall_clock = sum(s.wall_clock_s for s in sessions)
+    n_session_docs = sum(s.n_predicted for s in sessions)
+    api_cost = _cost_per_1k(config.model, successful)
+    gpu_cost = self_hosted_cost_per_1k(wall_clock, n_session_docs, usd_per_hour)
 
     return Metrics(
         condition=config.condition,
@@ -254,7 +297,9 @@ def aggregate(
         mean_input_tokens=_mean([u.input_tokens for u in usages]),
         mean_output_tokens=_mean([u.output_tokens for u in usages]),
         mean_cache_read_tokens=_mean([u.cache_read_tokens for u in usages]),
-        cost_per_1k_usd=_cost_per_1k(config.model, successful),
+        cost_per_1k_usd=api_cost if api_cost is not None else gpu_cost,
+        gpu_wall_clock_s=wall_clock or None,
+        throughput_docs_per_hour=throughput_per_hour(wall_clock, n_session_docs),
         text_layer_ceiling=ceiling,
         truncated_outputs=sum(p.stop_reason in ("max_tokens", "length") for p in successful),
         config=asdict(config),
@@ -307,14 +352,21 @@ def per_field_table(m: Metrics) -> str:
     return "\n".join(lines)
 
 
-def evaluate_run(directory: Path) -> Metrics:
+def evaluate_run(directory: Path, *, usd_per_hour: float | None = None) -> Metrics:
     config = load_config(directory)
     items = load_eval_set(config.eval_set)
     if config.limit:
         items = items[: config.limit]
     predictions = load_predictions(directory / PREDICTIONS_FILE)
     scores = score_run(predictions, items, frozenset(config.excluded_fields))
-    return aggregate(config, items, predictions, scores)
+    return aggregate(
+        config,
+        items,
+        predictions,
+        scores,
+        sessions=load_sessions(directory),
+        usd_per_hour=usd_per_hour,
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -322,12 +374,19 @@ def main(argv: list[str] | None = None) -> int:
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
     parser.add_argument("run_dir", type=Path, nargs="+")
+    parser.add_argument(
+        "--gpu-usd-per-hour",
+        type=float,
+        help="rented GPU rate, for self-hosted conditions: cost/1k = rate / measured "
+        "throughput. Without it a self-hosted run's cost column reads '-' rather than "
+        "borrowing an API price that does not apply to it.",
+    )
     args = parser.parse_args(argv)
 
     print(TABLE_HEADER)
     all_metrics = []
     for directory in args.run_dir:
-        metrics = evaluate_run(directory)
+        metrics = evaluate_run(directory, usd_per_hour=args.gpu_usd_per_hour)
         (directory / METRICS_FILE).write_text(metrics.to_json() + "\n", encoding="utf-8")
         all_metrics.append(metrics)
         print(table_row(metrics))
