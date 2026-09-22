@@ -1,0 +1,193 @@
+{
+ "condition": "vision-frontier",
+ "eval_set": "test_seen",
+ "model": "gemini-3.8-flash",
+ "n_documents": 350,
+ "n_predicted": 350,
+ "n_errors": 0,
+ "n_valid": 350,
+ "validity_rate": 1.0,
+ "field_accuracy_all": 0.9904191616766467,
+ "field_accuracy_valid": 0.9904191616766467,
+ "exact_match_all": 0.9085714285714286,
+ "exact_match_valid": 0.9085714285714286,
+ "abstain_rate": 0.0,
+ "per_field": {
+  "invoice_number": {
+   "scoreable": 310,
+   "correct": 310,
+   "wrong": 0,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 1.0,
+   "accuracy_valid": 1.0
+  },
+  "purchase_order_number": {
+   "scoreable": 50,
+   "correct": 50,
+   "wrong": 0,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 1.0,
+   "accuracy_valid": 1.0
+  },
+  "invoice_date": {
+   "scoreable": 340,
+   "correct": 340,
+   "wrong": 0,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 1.0,
+   "accuracy_valid": 1.0
+  },
+  "due_date": {
+   "scoreable": 180,
+   "correct": 180,
+   "wrong": 0,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 1.0,
+   "accuracy_valid": 1.0
+  },
+  "vendor.name": {
+   "scoreable": 210,
+   "correct": 210,
+   "wrong": 0,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 1.0,
+   "accuracy_valid": 1.0
+  },
+  "vendor.address": {
+   "scoreable": 270,
+   "correct": 270,
+   "wrong": 0,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 1.0,
+   "accuracy_valid": 1.0
+  },
+  "vendor.email": {
+   "scoreable": 160,
+   "correct": 160,
+   "wrong": 0,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 1.0,
+   "accuracy_valid": 1.0
+  },
+  "vendor.website": {
+   "scoreable": 60,
+   "correct": 60,
+   "wrong": 0,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 1.0,
+   "accuracy_valid": 1.0
+  },
+  "buyer.name": {
+   "scoreable": 310,
+   "correct": 310,
+   "wrong": 0,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 1.0,
+   "accuracy_valid": 1.0
+  },
+  "buyer.address": {
+   "scoreable": 310,
+   "correct": 308,
+   "wrong": 2,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 0.9935483870967742,
+   "accuracy_valid": 0.9935483870967742
+  },
+  "currency": {
+   "scoreable": 320,
+   "correct": 320,
+   "wrong": 0,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 1.0,
+   "accuracy_valid": 1.0
+  },
+  "subtotal": {
+   "scoreable": 230,
+   "correct": 230,
+   "wrong": 0,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 1.0,
+   "accuracy_valid": 1.0
+  },
+  "discount": {
+   "scoreable": 60,
+   "correct": 60,
+   "wrong": 0,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 1.0,
+   "accuracy_valid": 1.0
+  },
+  "tax": {
+   "scoreable": 170,
+   "correct": 160,
+   "wrong": 10,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 0.9411764705882353,
+   "accuracy_valid": 0.9411764705882353
+  },
+  "total_amount": {
+   "scoreable": 270,
+   "correct": 270,
+   "wrong": 0,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 1.0,
+   "accuracy_valid": 1.0
+  },
+  "amount_due": {
+   "scoreable": 40,
+   "correct": 21,
+   "wrong": 19,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 0.525,
+   "accuracy_valid": 0.525
+  },
+  "payment_terms": {
+   "scoreable": 50,
+   "correct": 49,
+   "wrong": 1,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 0.98,
+   "accuracy_valid": 0.98
+  }
+ },
+ "latency_p50_s": 5.221142134978436,
+ "latency_p95_s": 13.092638232017634,
+ "mean_input_tokens": 4444.0,
+ "mean_output_tokens": 406.84285714285716,
+ "mean_cache_read_tokens": 0.0,
+ "cost_per_1k_usd": 4.8586607142857146,
+ "text_layer_ceiling": null,
+ "truncated_outputs": 0,
+ "config": {
+  "condition": "vision-frontier",
+  "eval_set": "test_seen",
+  "input_kind": "image",
+  "backend": "openai",
+  "model": "gemini-3.8-flash",
+  "prompt_digest": "00d34abc620f54922e16f1b3e09efbc2e89ec0fe11b38a6365e070d43c2a428e",
+  "with_example": true,
+  "effort": null,
+  "max_tokens": 16000,
+  "excluded_fields": [],
+  "limit": null,
+  "started_at": "2026-09-18T21:34:14+00:00",
+  "git_commit": "31d4019"
+ }
+}

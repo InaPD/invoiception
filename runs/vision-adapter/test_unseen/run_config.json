@@ -1,0 +1,17 @@
+{
+ "condition": "vision-adapter",
+ "eval_set": "test_unseen",
+ "input_kind": "image",
+ "backend": "openai",
+ "model": "slotfill-lora",
+ "prompt_digest": "980618c16832d5469a2c3a1d8df3e4846fc7a47cbafbb9db60e785f4c8a6d257",
+ "with_example": false,
+ "with_schema": false,
+ "effort": null,
+ "max_tokens": 1024,
+ "excluded_fields": [],
+ "limit": null,
+ "started_at": "2026-09-22T16:23:13+00:00",
+ "git_commit": "76c7736",
+ "schema_digest": "fa19462a26b7012875fc8f7fd4d5f1776c34b0e33147d257b1ef4d24c2776670"
+}

@@ -1,0 +1,112 @@
+{
+ "condition": "vision-frontier",
+ "eval_set": "rvlcdip",
+ "model": "gemini-3.8-flash",
+ "n_documents": 433,
+ "n_predicted": 433,
+ "n_errors": 0,
+ "n_valid": 431,
+ "validity_rate": 0.9953810623556582,
+ "field_accuracy_all": 0.5040453074433657,
+ "field_accuracy_valid": 0.507328990228013,
+ "exact_match_all": null,
+ "exact_match_valid": null,
+ "abstain_rate": 0.20667522464698332,
+ "per_field": {
+  "invoice_number": {
+   "scoreable": 401,
+   "correct": 189,
+   "wrong": 102,
+   "invalid": 2,
+   "abstained": 108,
+   "accuracy_all": 0.6450511945392492,
+   "accuracy_valid": 0.6494845360824743
+  },
+  "invoice_date": {
+   "scoreable": 401,
+   "correct": 233,
+   "wrong": 157,
+   "invalid": 2,
+   "abstained": 9,
+   "accuracy_all": 0.5943877551020408,
+   "accuracy_valid": 0.5974358974358974
+  },
+  "due_date": {
+   "scoreable": 401,
+   "correct": 16,
+   "wrong": 24,
+   "invalid": 2,
+   "abstained": 359,
+   "accuracy_all": 0.38095238095238093,
+   "accuracy_valid": 0.4
+  },
+  "vendor.name": {
+   "scoreable": 406,
+   "correct": 180,
+   "wrong": 220,
+   "invalid": 2,
+   "abstained": 4,
+   "accuracy_all": 0.44776119402985076,
+   "accuracy_valid": 0.45
+  },
+  "vendor.address": {
+   "scoreable": 406,
+   "correct": 43,
+   "wrong": 296,
+   "invalid": 2,
+   "abstained": 65,
+   "accuracy_all": 0.12609970674486803,
+   "accuracy_valid": 0.12684365781710916
+  },
+  "buyer.name": {
+   "scoreable": 391,
+   "correct": 235,
+   "wrong": 142,
+   "invalid": 2,
+   "abstained": 12,
+   "accuracy_all": 0.6200527704485488,
+   "accuracy_valid": 0.623342175066313
+  },
+  "buyer.address": {
+   "scoreable": 391,
+   "correct": 159,
+   "wrong": 158,
+   "invalid": 2,
+   "abstained": 72,
+   "accuracy_all": 0.49843260188087773,
+   "accuracy_valid": 0.501577287066246
+  },
+  "total_amount": {
+   "scoreable": 319,
+   "correct": 191,
+   "wrong": 111,
+   "invalid": 2,
+   "abstained": 15,
+   "accuracy_all": 0.6282894736842105,
+   "accuracy_valid": 0.6324503311258278
+  }
+ },
+ "latency_p50_s": 10.328723618004005,
+ "latency_p95_s": 44.41172690002713,
+ "mean_input_tokens": 4447.113163972286,
+ "mean_output_tokens": 4084.1293302540416,
+ "mean_cache_read_tokens": 0.0,
+ "cost_per_1k_usd": 18.650819861431874,
+ "text_layer_ceiling": null,
+ "truncated_outputs": 3,
+ "config": {
+  "condition": "vision-frontier",
+  "eval_set": "rvlcdip",
+  "input_kind": "image",
+  "backend": "openai",
+  "model": "gemini-3.8-flash",
+  "prompt_digest": "00d34abc620f54922e16f1b3e09efbc2e89ec0fe11b38a6365e070d43c2a428e",
+  "with_example": true,
+  "effort": null,
+  "max_tokens": 16000,
+  "excluded_fields": [],
+  "limit": null,
+  "started_at": "2026-09-18T22:12:34+00:00",
+  "git_commit": "31d4019"
+ }
+}

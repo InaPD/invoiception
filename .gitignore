@@ -11,6 +11,9 @@ runs/*
 !runs/gemini38-openrouter/
 # Trained-adapter evidence (run_config, smoke, train_log): small, always kept.
 !runs/train/
+# Both sides of the ship-gate table. These are the project's results; they are committed.
+!runs/vision-frontier/
+!runs/vision-adapter/
 
 # Trained LoRA adapters downloaded from the GPU box: weights stay out of git. Their
 # run_config.json / smoke.json / train_log.json are committed under runs/train/<name>/.

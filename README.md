@@ -7,38 +7,93 @@ to ship the prompt?**
 The deliverable is a recommendation backed by held-out eval numbers, not a model. Shipping
 the prompt is a valid and expected outcome. Full plan: [`docs/plan.md`](docs/plan.md).
 
-> **Status: phase 2 harness built, baseline model chosen, full held-out run not yet done.**
-> Schema, dataset mappers, the frozen layout split and the eval harness (`eval/`) are in
-> place and verified end to end with an oracle backend. A dev-set shakedown across several
-> candidates picked **Gemini 3.8 Flash** as the prompted frontier baseline: 100% schema
-> validity, field accuracy and exact match across 28 `dev_unseen` documents (two independent
-> samples, zero failures), against 85% / 81% / 45% for the cheapest alternative tried
-> (DeepSeek v4-flash-vision-exp), which also had a 15% catastrophic-failure rate (empty
-> output, full token budget burned on hidden reasoning). The real held-out run (`test_seen`
-> + `test_unseen` + `rvlcdip`, ~1,170 documents) has not happened yet, so there are no
-> ship-gate numbers to report. The table below is empty on purpose.
->
-> **Phase 3 done: the first adapter is trained.** Qwen2.5-VL-3B, LoRA r=16, one epoch over
-> 1,750 FATURA pages, 81 minutes on a free Colab T4
-> ([`runs/train/qwen25vl3b-r16-train/`](runs/train/qwen25vl3b-r16-train/)). On a 20-page
-> smoke test over unseen layouts it scores **100% schema validity, 98% field accuracy,
-> 80% exact match** - against 0% validity for the untuned base model, which reads the page
-> correctly but answers in its own invented field names. Those are 20 pages of one layout,
-> not a result; the held-out numbers come from phase 4
-> ([Evaluating the adapter](#evaluating-the-adapter)), which is built and not yet run.
+> **Status: phases 1-4 complete.** Schema, mappers, frozen layout splits, eval harness,
+> the prompted frontier baseline, one trained LoRA adapter and both sides of the ship-gate
+> table, measured on ~1,083 held-out documents. The ablation (data mix) and the serving app
+> are the remaining work.
 
 ## The answer
 
-_Pending phase 2. This section will lead with the recommendation._
+**Ship the prompt. Keep the adapter warm for one specific case.**
+
+A LoRA-tuned Qwen2.5-VL-3B does get within **2.6 points of field accuracy** of a prompted
+frontier model on invoice layouts neither has seen, at **1/30th the cost** - and on real
+scanned invoices, where the frontier model burns ten times its usual output budget,
+**1/90th**. That part of the hypothesis holds up.
+
+It fails on the two things an accounting import actually needs:
+
+- **Whole-record correctness.** 96.2% of fields right sounds close to 98.9%, but a record
+  has ~12 fields, and per-document perfection compounds: **65% exact match versus 95%** on
+  unseen layouts. One in three extracted invoices needs a human to touch it, against one in
+  twenty. The misses are character-level misreads of long, unpredictable strings
+  (`3934 Gonzales Loop` read as `9394 Gonzales Loop`, `Scottland` as `Scotland`) - the
+  reading resolution of a 3B model, not a fixable labelling problem.
+- **Schema compliance on real documents.** On the RVL-CDIP scans the adapter returns
+  **80.6% valid JSON against the baseline's 99.5%**. Nearly one in five real invoices comes
+  back as a structured error. That is precisely the failure this project set out to prevent.
+
+The honest reading of the cost column is that it is a **floor**, not a forecast: $0.17 per
+1,000 assumes the GPU is busy every second it is rented. Break-even against the API is
+around **70 invoices per hour sustained**; below that volume, an idle GPU makes the prompt
+cheaper as well as better.
+
+**Where the adapter would win anyway:** high-volume batch extraction over clean,
+template-like documents close to its training distribution, where its 97.8% field accuracy
+on seen layouts and 30-90x cost advantage are decisive and the 1-in-6 whole-record miss
+rate is acceptable because the work is queued, not interactive.
+
+**The experiment that could change this verdict** is constrained decoding: the RVL-CDIP
+failures are structural drift (the model invents `buyer.email`, `buyer.city`, or emits
+`"DM"` where the schema wants ISO 4217), not garbled output, and a grammar-constrained
+decoder at the serving layer eliminates that class of error by construction. If validity
+goes to ~100% there, the recommendation for real scans deserves to be rerun. It is not
+claimed here because it has not been measured.
+
+One thing the fine-tune is unambiguously good at, and it is not accuracy: it **learned the
+dataset's labelling conventions**. On `amount_due` it scores 100% against the baseline's
+52.5%, because "which printed figure counts as the amount due" is a convention you can
+teach but not easily prompt.
 
 ## Ship-gate table
 
-| Condition | Eval set | Schema validity | Field accuracy | Exact match | Cost / 1k | p95 latency |
-|---|---|---|---|---|---|---|
-| Prompted frontier baseline | FATURA unseen layouts | - | - | - | - | - |
-| Prompted frontier baseline | RVL-CDIP (real scans) | - | - | - | - | - |
-| Tuned adapter | FATURA unseen layouts | - | - | - | - | - |
-| Tuned adapter | RVL-CDIP (real scans) | - | - | - | - | - |
+Every number below is measured on a frozen held-out set that neither condition was
+iterated against. Field accuracy is the **all-outputs** view: an invalid output is wrong on
+every field.
+
+| Condition | Eval set | n | Schema validity | Field accuracy | Exact match | Cost / 1k | Throughput |
+|---|---|---|---|---|---|---|---|
+| Prompted frontier (Gemini 3.8 Flash) | FATURA seen layouts | 350 | 100.0% | 99.0% | 90.9% | $4.86 | - |
+| Prompted frontier (Gemini 3.8 Flash) | FATURA **unseen** layouts | 300 | 99.3% | 98.9% | **95.0%** | $4.95 | - |
+| Prompted frontier (Gemini 3.8 Flash) | RVL-CDIP (real scans) | 433 | **99.5%** | 50.4% | n/a | $18.65 | - |
+| Tuned adapter (Qwen2.5-VL-3B, r=16) | FATURA seen layouts | 350 | 99.4% | 97.8% | 83.7% | $0.16 | 2,211/h |
+| Tuned adapter (Qwen2.5-VL-3B, r=16) | FATURA **unseen** layouts | 300 | 100.0% | 96.2% | 65.0% | **$0.17** | 2,118/h |
+| Tuned adapter (Qwen2.5-VL-3B, r=16) | RVL-CDIP (real scans) | 433 | **80.6%** | 40.0% | n/a | $0.21 | 1,683/h |
+
+RVL-CDIP has no field values, only region boxes, so it scores **grounding** (is the
+predicted value inside the right annotated region?) and has no exact-match column; a null
+prediction there is an abstention, excluded from the denominator. Among *valid* outputs the
+two conditions ground equally well (52.0% adapter, 50.7% baseline) - the adapter's deficit
+on that set is entirely schema compliance, not reading.
+
+**Reading the cost column.** The baseline's is measured tokens x published prices. The
+adapter's is a rented T4 at $0.35/hour divided by measured throughput, which assumes 100%
+utilisation - a floor. Break-even against the baseline is ~3.3% utilisation, about **70
+invoices/hour sustained**. On owned hardware (a ~$300 consumer card, amortised, plus power)
+the floor is roughly $0.02 per 1,000, but the machine still has to be up, reachable and
+maintained, which the API does not.
+
+Note where the cost gap comes from: the baseline sends **4,444 input tokens per invoice**
+(the schema and the worked example, re-sent every time) and the adapter sends **666**, with
+the schema in its weights instead. On RVL-CDIP the baseline also spent 4,084 output tokens
+per document against the adapter's 153, which is where the 90x gap on real scans comes
+from.
+
+**Latency is not compared here on purpose.** The baseline ran at the harness default of 4
+concurrent requests against a remote API; the adapter ran at 16 against one local GPU,
+where per-request latency rises with batch load by design (p50 26s, p95 34s on
+`test_unseen`). Those measure different things. Throughput is the meaningful self-hosted
+number, and a concurrency-matched single-request latency measurement is still outstanding.
 
 ---
 
@@ -499,8 +554,55 @@ Kaggle GPU. One caveat, stated because it is the likeliest thing to go wrong: a 
 The notebook therefore sends a single request before the 1,083-document run, and names a
 paid L4 (a dollar or two) as the fallback rather than pretending the free path is certain.
 
+### What the held-out run showed
+
+**Seen versus unseen layouts.** The adapter loses 1.6 points of field accuracy and 18.7
+points of exact match moving from layouts it trained on to layouts it has never seen
+(97.8% -> 96.2%, 83.7% -> 65.0%). The baseline, which trained on nothing, moves the other
+way (90.9% -> 95.0% exact match; the unseen layouts happen to annotate fewer hard fields).
+That asymmetry is the layout-ID split doing its job: a document-level split would have hidden
+it completely.
+
+**Where the adapter's errors are.** Concentrated in long, unpredictable strings. On unseen
+layouts: `vendor.email` 77.3% (against 99.3%), `buyer.address` 92.0%, `vendor.address`
+91.5%, while `invoice_date`, `currency` and `subtotal` are all at 100%. Short, structured,
+guessable fields are solved; character-perfect transcription of invented street names and
+addresses is not. Sampling the mismatches shows the field located correctly and one or two
+characters misread, which is a vision-resolution limit of a 3B model in 4-bit.
+
+**Where the adapter beats the baseline**, and why it is not an accuracy story: `amount_due`
+100% against 52.5%, `tax` 99.4% against 94.1% on seen layouts. Both are convention
+questions - which printed figure the dataset counts as the amount due, whether a VAT line
+or a GST line is the tax - and conventions are exactly what supervised labels transmit and
+a prompt has to guess.
+
+**The synthetic-to-real gap is a schema gap.** The plan predicted RVL-CDIP numbers below
+FATURA's, and both conditions deliver that (98.9% -> 50.4% for the baseline). The
+unpredicted part is *how* the adapter degrades. Its 84 invalid outputs are not garbled
+text; they are structural drift, categorised from the raw outputs:
+
+| Failure | Documents | What happened |
+|---|---|---|
+| extra keys in `buyer` | 42 | invented `email`, `website`, `city`, `state`, `postcode`, `currency` - fields FATURA's `vendor` has and its `buyer` never did |
+| `currency` not ISO 4217 | 9 | `"DM"` read off 1990s German invoices. The model read the page correctly and the schema rejected the answer |
+| malformed JSON | 7 | a missing quote or brace, on the noisiest scans |
+| `buyer.address` missing | 5 | a required key omitted rather than nulled |
+
+Every one of those is a decoding-time constraint away from being impossible, which is why
+constrained decoding is the named next experiment rather than more training data.
+
 ## Limitations
 
+- The adapter's headline weakness is **character-level transcription**, and no amount of
+  FATURA would fix it: the misread strings are randomly generated place names that no
+  model can infer from context. A larger base model or a higher-resolution vision path is
+  the lever, not more examples.
+- **Constrained decoding is untested.** The RVL-CDIP validity gap (80.6% vs 99.5%) is the
+  single biggest input to the recommendation, and it is plausibly an artefact of
+  unconstrained generation rather than of the model. Until that is measured, the
+  recommendation for real scans is provisional.
+- **Latency is not comparable across conditions** as measured (different concurrency,
+  remote API vs local GPU); only throughput is.
 - Training data is **synthetic**. FATURA's content is generated, its layouts are clean, and
   its dates are internally inconsistent (due dates frequently precede invoice dates). Expect
   RVL-CDIP numbers visibly below FATURA held-out numbers; that gap is a finding, not a bug.

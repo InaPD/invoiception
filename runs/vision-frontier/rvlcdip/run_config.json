@@ -1,0 +1,15 @@
+{
+ "condition": "vision-frontier",
+ "eval_set": "rvlcdip",
+ "input_kind": "image",
+ "backend": "openai",
+ "model": "gemini-3.8-flash",
+ "prompt_digest": "00d34abc620f54922e16f1b3e09efbc2e89ec0fe11b38a6365e070d43c2a428e",
+ "with_example": true,
+ "effort": null,
+ "max_tokens": 16000,
+ "excluded_fields": [],
+ "limit": null,
+ "started_at": "2026-09-18T22:12:34+00:00",
+ "git_commit": "31d4019"
+}
