@@ -60,7 +60,7 @@ from eval.datasets import (
 )
 from eval.pages import ImagePart, encode_image
 from eval.prompt import WORKED_EXAMPLE_DOC_ID, InputKind, build_request, prompt_digest, text_part
-from schema.validate import SCHEMA_PATH
+from schema.validate import SCHEMA_PATH, load_schema
 
 RUNS_DIR = Path(__file__).resolve().parent.parent / "runs"
 CONFIG_FILE = "run_config.json"
@@ -82,6 +82,7 @@ _IDENTITY_KEYS = (
     "effort",
     "max_tokens",
     "excluded_fields",
+    "guided_json",
 )
 
 
@@ -116,6 +117,12 @@ class RunConfig:
     effort: str | None = None
     max_tokens: int = DEFAULT_MAX_TOKENS
     excluded_fields: tuple[str, ...] = ()
+    #: True when the run asked the server to decode against the schema. Nothing in a
+    #: response confirms the constraint was applied, so this records the request;
+    #: `eval/evaluate.py` reports an invalid output under it as the server having ignored
+    #: it. Where it did apply, every output is valid by construction and schema validity
+    #: stops being a measurement of the model.
+    guided_json: bool = False
     limit: int | None = None
     started_at: str = field(default_factory=_now)
     git_commit: str | None = field(default_factory=_git_commit)
@@ -136,6 +143,8 @@ class RunConfig:
         payload["excluded_fields"] = tuple(payload.get("excluded_fields", ()))
         # A run written before this field existed did not record its schema; say so.
         payload.setdefault("schema_digest", None)
+        # A run written before guided decoding existed was unconstrained.
+        payload.setdefault("guided_json", False)
         return cls(**payload)
 
 
@@ -403,7 +412,10 @@ def make_backend(args: argparse.Namespace) -> Backend:
     if args.backend == "anthropic":
         return AnthropicBackend(args.model, cache=not args.no_cache)
     return OpenAICompatibleBackend(
-        args.model, base_url=args.base_url, api_key=resolve_api_key(args)
+        args.model,
+        base_url=args.base_url,
+        api_key=resolve_api_key(args),
+        guided_json=load_schema() if args.guided_json else None,
     )
 
 
@@ -433,6 +445,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="drop the system prompt too; with --no-example this is the tuned adapter's prompt",
     )
     parser.add_argument("--no-cache", action="store_true", help="disable prompt caching")
+    parser.add_argument(
+        "--guided-json",
+        action="store_true",
+        help="constrain decoding to the schema (vLLM only); makes every output valid by "
+        "construction, so compare against the same model unconstrained",
+    )
     parser.add_argument("--limit", type=int, help="only the first N documents (dev iteration)")
     parser.add_argument("--concurrency", type=int, default=DEFAULT_CONCURRENCY)
     parser.add_argument("--fresh", action="store_true", help="discard an existing run directory")
@@ -456,6 +474,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.backend == "openai" and not args.base_url:
         print("--backend openai needs --base-url", file=sys.stderr)
         return 2
+    if args.guided_json and args.backend != "openai":
+        print("--guided-json needs --backend openai", file=sys.stderr)
+        return 2
 
     input_kind: InputKind = args.input_kind
     config = RunConfig(
@@ -467,6 +488,7 @@ def main(argv: list[str] | None = None) -> int:
         prompt_digest=prompt_digest(
             input_kind, with_example=not args.no_example, with_schema=not args.no_schema
         ),
+        guided_json=args.guided_json,
         with_example=not args.no_example,
         with_schema=not args.no_schema,
         effort=args.effort,

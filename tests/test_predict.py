@@ -20,6 +20,7 @@ from eval.predict import (
     predict_item,
     run,
 )
+from schema.validate import load_schema
 
 QUIET = RunOptions(log=lambda _: None)
 
@@ -299,11 +300,12 @@ def test_make_backend_openai_reads_base_url_and_resolved_key(monkeypatch):
     monkeypatch.setenv("OPENROUTER_API_KEY", "or-key")
     args = Namespace(
         backend="openai", model="deepseek/deepseek-v4-flash-vision-exp",
-        base_url="https://openrouter.ai/api/v1", api_key=None,
+        base_url="https://openrouter.ai/api/v1", api_key=None, guided_json=False,
     )  # fmt: skip
     backend = make_backend(args)
     assert backend.model == "deepseek/deepseek-v4-flash-vision-exp"
     assert backend._client.api_key == "or-key"
+    assert backend._guided_json is None
     assert backend._client.base_url is not None and "openrouter.ai" in str(backend._client.base_url)
 
 
@@ -343,3 +345,41 @@ class TestSessionLog:
 
         record_session(tmp_path, Session("2026-09-22T10:00:00+00:00", 3.0, 0, 16))
         assert not (tmp_path / SESSIONS_FILE).exists()
+
+
+def test_resume_refuses_a_changed_guided_json(tmp_path, items):
+    """Constrained and unconstrained decoding are two conditions. Mixing them under one
+    run name would put both in the same predictions file with nothing to tell them apart."""
+    out = tmp_path / "run"
+    run(_backend(items), items, _config(), out, options=QUIET)
+    with pytest.raises(RuntimeError, match="guided_json"):
+        run(_backend(items), items, _config(guided_json=True), out, options=QUIET)
+
+
+def test_older_run_configs_load_as_unconstrained():
+    config = RunConfig("c", "dev_unseen", "image", "openai", "m", "p" * 64)
+    assert config.guided_json is False
+    payload = json.loads(config.to_json())
+    del payload["guided_json"]
+    assert RunConfig.from_json(json.dumps(payload)).guided_json is False
+
+
+def test_make_backend_loads_the_schema_when_constrained(monkeypatch):
+    from argparse import Namespace
+
+    from eval.predict import make_backend
+
+    args = Namespace(
+        backend="openai", model="slotfill-lora", base_url="http://localhost:8000/v1",
+        api_key="unused", guided_json=True,
+    )  # fmt: skip
+    assert make_backend(args)._guided_json == load_schema()
+
+
+def test_cli_refuses_guided_json_on_a_backend_that_cannot_do_it(capsys):
+    assert (
+        main(["--set", "dev_unseen", "--input", "image", "--condition", "c",
+              "--model", "claude-haiku-4-5", "--backend", "anthropic", "--guided-json"])
+        == 2
+    )  # fmt: skip
+    assert "--guided-json needs --backend openai" in capsys.readouterr().err

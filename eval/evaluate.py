@@ -404,6 +404,23 @@ def main(argv: list[str] | None = None) -> int:
             notes.append(f"{metrics.truncated_outputs} outputs truncated at max_tokens")
         if metrics.abstain_rate:
             notes.append(f"abstain rate {_pct(metrics.abstain_rate)}")
+        if metrics.config.get("guided_json"):
+            # Constrained decoding makes an invalid output unreachable, so the validity
+            # column describes the decoder rather than the model.
+            notes.append("schema-constrained decoding: validity is not a model measurement")
+            # `guided_json` records what the run asked for. A server without guided
+            # decoding accepts the field and ignores it, and the only evidence either way
+            # is the output: under a working constraint nothing invalid can be emitted, so
+            # an invalid output that was neither truncated nor an error says the constraint
+            # never reached the sampler.
+            unconstrained = (
+                metrics.n_predicted - metrics.n_errors - metrics.n_valid - metrics.truncated_outputs
+            )
+            if unconstrained > 0:
+                notes.append(
+                    f"{unconstrained} invalid outputs under a requested constraint: the "
+                    "server did not apply it, and this run is not schema-constrained"
+                )
         if notes:
             print("; ".join(notes))
         print(per_field_table(metrics))
