@@ -34,6 +34,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 from collections.abc import Callable, Iterable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict, dataclass, field, replace
@@ -64,6 +65,10 @@ from schema.validate import SCHEMA_PATH
 RUNS_DIR = Path(__file__).resolve().parent.parent / "runs"
 CONFIG_FILE = "run_config.json"
 PREDICTIONS_FILE = "predictions.jsonl"
+#: One line per session that actually predicted something. A self-hosted condition's cost
+#: is GPU time divided by documents, so the run measures its own wall clock rather than
+#: leaving it to be reconstructed from timestamps afterwards.
+SESSIONS_FILE = "sessions.jsonl"
 DEFAULT_CONCURRENCY = 4
 
 #: Changing any of these mid-run would mix two experiments under one name.
@@ -132,6 +137,32 @@ class RunConfig:
         # A run written before this field existed did not record its schema; say so.
         payload.setdefault("schema_digest", None)
         return cls(**payload)
+
+
+@dataclass(frozen=True, slots=True)
+class Session:
+    """One invocation of `run`: how long it took and how much of the set it got through."""
+
+    started_at: str
+    wall_clock_s: float
+    n_predicted: int
+    concurrency: int
+
+
+def record_session(directory: Path, session: Session) -> None:
+    """Append a session, unless it predicted nothing - re-checking a finished run is not work."""
+    if session.n_predicted <= 0:
+        return
+    with (directory / SESSIONS_FILE).open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(asdict(session)) + "\n")
+
+
+def load_sessions(directory: Path) -> list[Session]:
+    path = directory / SESSIONS_FILE
+    if not path.exists():
+        return []
+    with path.open(encoding="utf-8") as fh:
+        return [Session(**json.loads(line)) for line in fh if line.strip()]
 
 
 class HeldOutError(RuntimeError):
@@ -317,6 +348,8 @@ def run(
     )
 
     results = dict(done)
+    started = _now()
+    tic = time.perf_counter()
     with (
         (directory / PREDICTIONS_FILE).open("a", encoding="utf-8") as sink,
         ThreadPoolExecutor(max_workers=max(1, options.concurrency)) as pool,
@@ -334,6 +367,10 @@ def run(
             status = "ok" if prediction.ok else f"ERROR {prediction.error}"
             latency = f"{prediction.latency_s:.1f}s" if prediction.latency_s else "-"
             options.log(f"  [{index}/{len(pending)}] {prediction.doc_id} {latency} {status}")
+    record_session(
+        directory,
+        Session(started, time.perf_counter() - tic, len(pending), max(1, options.concurrency)),
+    )
     return [results[item.doc_id] for item in items if item.doc_id in results]
 
 

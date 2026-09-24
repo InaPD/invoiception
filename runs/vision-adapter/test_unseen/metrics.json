@@ -1,0 +1,179 @@
+{
+ "condition": "vision-adapter",
+ "eval_set": "test_unseen",
+ "model": "slotfill-lora",
+ "n_documents": 300,
+ "n_predicted": 300,
+ "n_errors": 0,
+ "n_valid": 300,
+ "validity_rate": 1.0,
+ "field_accuracy_all": 0.9624624624624625,
+ "field_accuracy_valid": 0.9624624624624625,
+ "exact_match_all": 0.65,
+ "exact_match_valid": 0.65,
+ "abstain_rate": 0.0,
+ "per_field": {
+  "invoice_number": {
+   "scoreable": 240,
+   "correct": 230,
+   "wrong": 10,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 0.9583333333333334,
+   "accuracy_valid": 0.9583333333333334
+  },
+  "invoice_date": {
+   "scoreable": 300,
+   "correct": 300,
+   "wrong": 0,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 1.0,
+   "accuracy_valid": 1.0
+  },
+  "due_date": {
+   "scoreable": 210,
+   "correct": 210,
+   "wrong": 0,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 1.0,
+   "accuracy_valid": 1.0
+  },
+  "vendor.name": {
+   "scoreable": 270,
+   "correct": 268,
+   "wrong": 2,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 0.9925925925925926,
+   "accuracy_valid": 0.9925925925925926
+  },
+  "vendor.address": {
+   "scoreable": 270,
+   "correct": 247,
+   "wrong": 23,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 0.9148148148148149,
+   "accuracy_valid": 0.9148148148148149
+  },
+  "vendor.email": {
+   "scoreable": 150,
+   "correct": 116,
+   "wrong": 34,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 0.7733333333333333,
+   "accuracy_valid": 0.7733333333333333
+  },
+  "vendor.website": {
+   "scoreable": 30,
+   "correct": 30,
+   "wrong": 0,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 1.0,
+   "accuracy_valid": 1.0
+  },
+  "buyer.name": {
+   "scoreable": 300,
+   "correct": 299,
+   "wrong": 1,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 0.9966666666666667,
+   "accuracy_valid": 0.9966666666666667
+  },
+  "buyer.address": {
+   "scoreable": 300,
+   "correct": 276,
+   "wrong": 24,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 0.92,
+   "accuracy_valid": 0.92
+  },
+  "currency": {
+   "scoreable": 300,
+   "correct": 300,
+   "wrong": 0,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 1.0,
+   "accuracy_valid": 1.0
+  },
+  "subtotal": {
+   "scoreable": 270,
+   "correct": 270,
+   "wrong": 0,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 1.0,
+   "accuracy_valid": 1.0
+  },
+  "discount": {
+   "scoreable": 150,
+   "correct": 150,
+   "wrong": 0,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 1.0,
+   "accuracy_valid": 1.0
+  },
+  "tax": {
+   "scoreable": 150,
+   "correct": 150,
+   "wrong": 0,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 1.0,
+   "accuracy_valid": 1.0
+  },
+  "total_amount": {
+   "scoreable": 270,
+   "correct": 251,
+   "wrong": 19,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 0.9296296296296296,
+   "accuracy_valid": 0.9296296296296296
+  },
+  "payment_terms": {
+   "scoreable": 120,
+   "correct": 108,
+   "wrong": 12,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 0.9,
+   "accuracy_valid": 0.9
+  }
+ },
+ "latency_p50_s": 26.134981082000195,
+ "latency_p95_s": 33.64811252299978,
+ "mean_input_tokens": 666.0,
+ "mean_output_tokens": 179.83,
+ "mean_cache_read_tokens": 0.0,
+ "cost_per_1k_usd": 0.16522300461041678,
+ "gpu_wall_clock_s": 509.8309856550004,
+ "throughput_docs_per_hour": 2118.3490811420193,
+ "text_layer_ceiling": null,
+ "truncated_outputs": 0,
+ "config": {
+  "condition": "vision-adapter",
+  "eval_set": "test_unseen",
+  "input_kind": "image",
+  "backend": "openai",
+  "model": "slotfill-lora",
+  "prompt_digest": "980618c16832d5469a2c3a1d8df3e4846fc7a47cbafbb9db60e785f4c8a6d257",
+  "with_example": false,
+  "with_schema": false,
+  "effort": null,
+  "max_tokens": 1024,
+  "excluded_fields": [],
+  "limit": null,
+  "started_at": "2026-09-22T16:23:13+00:00",
+  "git_commit": "76c7736",
+  "schema_digest": "fa19462a26b7012875fc8f7fd4d5f1776c34b0e33147d257b1ef4d24c2776670"
+ }
+}

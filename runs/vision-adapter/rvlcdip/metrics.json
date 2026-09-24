@@ -1,0 +1,116 @@
+{
+ "condition": "vision-adapter",
+ "eval_set": "rvlcdip",
+ "model": "slotfill-lora",
+ "n_documents": 433,
+ "n_predicted": 433,
+ "n_errors": 0,
+ "n_valid": 349,
+ "validity_rate": 0.8060046189376443,
+ "field_accuracy_all": 0.43391136801541424,
+ "field_accuracy_valid": 0.5635635635635635,
+ "exact_match_all": null,
+ "exact_match_valid": null,
+ "abstain_rate": 0.167201540436457,
+ "per_field": {
+  "invoice_number": {
+   "scoreable": 401,
+   "correct": 175,
+   "wrong": 127,
+   "invalid": 79,
+   "abstained": 20,
+   "accuracy_all": 0.45931758530183725,
+   "accuracy_valid": 0.5794701986754967
+  },
+  "invoice_date": {
+   "scoreable": 401,
+   "correct": 179,
+   "wrong": 133,
+   "invalid": 79,
+   "abstained": 10,
+   "accuracy_all": 0.4578005115089514,
+   "accuracy_valid": 0.5737179487179487
+  },
+  "due_date": {
+   "scoreable": 401,
+   "correct": 20,
+   "wrong": 29,
+   "invalid": 79,
+   "abstained": 273,
+   "accuracy_all": 0.15625,
+   "accuracy_valid": 0.40816326530612246
+  },
+  "vendor.name": {
+   "scoreable": 406,
+   "correct": 164,
+   "wrong": 117,
+   "invalid": 79,
+   "abstained": 46,
+   "accuracy_all": 0.45555555555555555,
+   "accuracy_valid": 0.5836298932384342
+  },
+  "vendor.address": {
+   "scoreable": 406,
+   "correct": 63,
+   "wrong": 175,
+   "invalid": 79,
+   "abstained": 89,
+   "accuracy_all": 0.19873817034700317,
+   "accuracy_valid": 0.2647058823529412
+  },
+  "buyer.name": {
+   "scoreable": 391,
+   "correct": 226,
+   "wrong": 90,
+   "invalid": 69,
+   "abstained": 6,
+   "accuracy_all": 0.587012987012987,
+   "accuracy_valid": 0.7151898734177216
+  },
+  "buyer.address": {
+   "scoreable": 391,
+   "correct": 161,
+   "wrong": 131,
+   "invalid": 69,
+   "abstained": 30,
+   "accuracy_all": 0.44598337950138506,
+   "accuracy_valid": 0.5513698630136986
+  },
+  "total_amount": {
+   "scoreable": 319,
+   "correct": 138,
+   "wrong": 70,
+   "invalid": 64,
+   "abstained": 47,
+   "accuracy_all": 0.5073529411764706,
+   "accuracy_valid": 0.6634615384615384
+  }
+ },
+ "latency_p50_s": 33.84158877500067,
+ "latency_p95_s": 41.94553363599971,
+ "mean_input_tokens": 1020.1385681293302,
+ "mean_output_tokens": 152.77367205542726,
+ "mean_cache_read_tokens": 0.0,
+ "cost_per_1k_usd": 0.20793947645868616,
+ "gpu_wall_clock_s": 926.1030168679999,
+ "throughput_docs_per_hour": 1683.1820775962121,
+ "text_layer_ceiling": null,
+ "truncated_outputs": 0,
+ "config": {
+  "condition": "vision-adapter",
+  "eval_set": "rvlcdip",
+  "input_kind": "image",
+  "backend": "openai",
+  "model": "slotfill-lora",
+  "prompt_digest": "980618c16832d5469a2c3a1d8df3e4846fc7a47cbafbb9db60e785f4c8a6d257",
+  "with_example": false,
+  "with_schema": false,
+  "effort": null,
+  "max_tokens": 1024,
+  "excluded_fields": [],
+  "limit": null,
+  "started_at": "2026-09-22T16:32:38+00:00",
+  "git_commit": "76c7736",
+  "schema_digest": "fa19462a26b7012875fc8f7fd4d5f1776c34b0e33147d257b1ef4d24c2776670"
+ }
+}

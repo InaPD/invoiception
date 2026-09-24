@@ -225,3 +225,67 @@ def test_cli_notes_missing_errored_and_truncated_documents(tmp_path, monkeypatch
     assert "1 documents not yet predicted" in out
     assert "1 request errors" in out
     assert "1 outputs truncated" in out
+
+
+class TestSelfHostedCost:
+    """An adapter we host has no per-token price: its cost is GPU time / documents."""
+
+    def test_cost_per_1k_from_gpu_time(self):
+        from eval.evaluate import self_hosted_cost_per_1k
+
+        # 1,083 documents in 40 minutes on a $0.35/hour T4.
+        cost = self_hosted_cost_per_1k(wall_clock_s=2400.0, n_predicted=1083, usd_per_hour=0.35)
+        assert cost == pytest.approx(0.35 * (2400 / 3600) / 1083 * 1000, rel=1e-9)
+        assert cost == pytest.approx(0.2154, abs=1e-4)
+
+    def test_is_none_without_a_price_or_without_measured_time(self):
+        from eval.evaluate import self_hosted_cost_per_1k
+
+        assert self_hosted_cost_per_1k(2400.0, 1083, None) is None
+        assert self_hosted_cost_per_1k(0.0, 1083, 0.35) is None
+        assert self_hosted_cost_per_1k(2400.0, 0, 0.35) is None
+
+    def test_throughput_is_documents_per_hour(self):
+        from eval.evaluate import throughput_per_hour
+
+        assert throughput_per_hour(3600.0, 500) == pytest.approx(500.0)
+        assert throughput_per_hour(0.0, 500) is None
+
+
+def test_measured_gpu_time_replaces_the_token_price_for_a_self_hosted_model():
+    """An adapter served locally has no entry in PRICES; with a GPU rate and measured
+    sessions its cost column is real rather than absent, and the throughput is reported
+    next to it so the reader can see what the number is made of."""
+    from eval.predict import Session
+
+    items = [_item("a"), _item("b")]
+    predictions = {"a": _prediction("a", _record()), "b": _prediction("b", _record())}
+    config = _config(model="slotfill-lora")
+    scores = score_run(predictions, items, frozenset())
+    sessions = [Session("2026-09-22T10:00:00+00:00", 3600.0, 2, 16)]
+
+    m = aggregate(config, items, predictions, scores, sessions=sessions, usd_per_hour=0.35)
+    assert m.throughput_docs_per_hour == pytest.approx(2.0)
+    assert m.cost_per_1k_usd == pytest.approx(0.35 / 2 * 1000)
+    assert m.gpu_wall_clock_s == pytest.approx(3600.0)
+
+    # Without a GPU rate the column is honestly absent, not guessed.
+    assert aggregate(config, items, predictions, scores, sessions=sessions).cost_per_1k_usd is None
+
+
+def test_a_priced_api_model_ignores_the_gpu_rate():
+    items = [_item("a")]
+    predictions = {"a": _prediction("a", _record())}
+    config = _config()  # claude-haiku-4-5, which has a published price
+    scores = score_run(predictions, items, frozenset())
+    from eval.predict import Session
+
+    m = aggregate(
+        config,
+        items,
+        predictions,
+        scores,
+        sessions=[Session("t", 3600.0, 1, 4)],
+        usd_per_hour=0.35,
+    )
+    assert m.cost_per_1k_usd == pytest.approx(1.5)

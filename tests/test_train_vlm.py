@@ -118,3 +118,53 @@ def test_cli_can_refuse_to_resume():
     )
     config = config_from_args(args)
     assert config.resume is False and config.save_steps == 25
+
+
+def test_warmup_steps_is_a_share_of_the_optimizer_steps():
+    from train.train_vlm import warmup_steps
+
+    # 1,750 examples / (2 x 4) = 219 optimizer steps per epoch; 3% of that is ~7.
+    assert warmup_steps(TrainConfig(), n_examples=1750) == 7
+    # A 16-example shakedown still warms up for at least one step.
+    assert warmup_steps(TrainConfig(), n_examples=16) == 1
+    assert warmup_steps(TrainConfig(epochs=2), n_examples=1750) == 13
+
+
+def test_trainer_takes_processing_class_on_new_trl_and_tokenizer_on_old():
+    from train.train_vlm import processor_kwarg
+
+    class NewTrl:
+        def __init__(self, model, processing_class=None): ...
+
+    class OldTrl:
+        def __init__(self, model, tokenizer=None): ...
+
+    assert processor_kwarg(NewTrl, "P") == {"processing_class": "P"}
+    assert processor_kwarg(OldTrl, "P") == {"tokenizer": "P"}
+
+
+def test_spread_sample_covers_the_whole_split_not_just_its_head():
+    from train.train_vlm import spread_sample
+
+    rows = [{"layout_id": layout, "i": i} for layout in (5, 14, 26, 38, 47) for i in range(40)]
+    picked = spread_sample(rows, 20)
+    assert len(picked) == 20
+    assert {r["layout_id"] for r in picked} == {5, 14, 26, 38, 47}
+    assert spread_sample(rows, 500) == rows  # never more than there is
+    assert spread_sample([], 3) == []
+
+
+def test_step_health_counts_nan_steps_in_the_trainer_log():
+    from train.train_vlm import step_health
+
+    log = [
+        {"loss": float("nan"), "grad_norm": 0.05, "step": 5},
+        {"loss": float("nan"), "grad_norm": float("nan"), "step": 10},
+        {"loss": 0.3, "grad_norm": 0.04, "step": 15},
+        {"train_runtime": 12.0, "step": 15},  # the final summary row has no grad_norm
+    ]
+    assert step_health(log) == {
+        "logged_steps": 3,
+        "nan_loss_steps": 2,
+        "nan_grad_norm_steps": 1,
+    }

@@ -1,5 +1,5 @@
 [project]
-name = "slotfill"
+name = "invoiception"
 version = "0.1.0"
 description = "Can a small LoRA-tuned model extract invoice fields into a strict JSON schema at a fraction of a frontier model's cost?"
 requires-python = ">=3.10"
