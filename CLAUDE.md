@@ -1,4 +1,4 @@
-# Slotfill
+# Invoiception
 
 Can a small LoRA-tuned model extract key fields from invoice PDFs into a strict
 JSON schema at a fraction of a frontier model's cost? The deliverable is a
