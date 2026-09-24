@@ -20,10 +20,10 @@ the two properties an accounting import depends on:
   character-level misreads of long unpredictable strings (`3934 Gonzales Loop` as
   `9394 Gonzales Loop`, `Scottland` as `Scotland`), which is reading resolution rather than
   a labelling defect.
-- **Schema compliance on real documents.** On RVL-CDIP scans the adapter returns **80.6%
-  valid JSON against 99.5%**. Nearly one real invoice in five comes back as a structured
-  error. Among outputs that do validate, the adapter grounds slightly better than the
-  baseline (56.4% against 54.8%), so the deficit is the envelope, not the reading.
+- **Schema compliance on real documents.** Zero-shot on real scans the adapter returns
+  **80.6% valid JSON against 99.5%**, so nearly one real invoice in five comes back as a
+  structured error. Restricted to outputs that do validate, it reads those scans as well as
+  the baseline, so the deficit is the envelope rather than the reading.
 
 The cost figure is a floor rather than a forecast: $0.17 per 1,000 assumes the rented GPU is
 busy every second. Break-even against the API sits near **70 invoices per hour sustained**,
@@ -45,39 +45,15 @@ that class by construction. No measurement of it exists here, so it is not claim
 
 ## Results
 
-Field accuracy is the **all-outputs** view: an invalid output counts wrong on every field.
+Measured on the frozen FATURA held-out sets. Field accuracy is the **all-outputs** view: an
+invalid output counts wrong on every field.
 
 | Condition | Eval set | n | Schema validity | Field accuracy | Exact match | Cost / 1k | Throughput |
 |---|---|---|---|---|---|---|---|
-| Prompted frontier (Gemini 3.8 Flash) | FATURA seen layouts | 350 | 100.0% | 99.0% | 90.9% | $4.86 | - |
-| Prompted frontier (Gemini 3.8 Flash) | FATURA **unseen** layouts | 300 | 99.3% | 98.9% | **95.0%** | $4.95 | - |
-| Prompted frontier (Gemini 3.8 Flash) | RVL-CDIP (real scans) | 433 | **99.5%** | 54.4% | n/a | $18.65 | - |
-| Tuned adapter (Qwen2.5-VL-3B, r=16) | FATURA seen layouts | 350 | 99.4% | 97.8% | 83.7% | $0.16 | 2,211/h |
-| Tuned adapter (Qwen2.5-VL-3B, r=16) | FATURA **unseen** layouts | 300 | 100.0% | 96.2% | 65.0% | **$0.17** | 2,118/h |
-| Tuned adapter (Qwen2.5-VL-3B, r=16) | RVL-CDIP (real scans) | 433 | **80.6%** | 43.4% | n/a | $0.21 | 1,683/h |
-
-RVL-CDIP carries region boxes rather than field values, so it scores **grounding** (is the
-predicted value inside the right annotated region?) and has no exact-match column; a null
-prediction there is an abstention and leaves the denominator. Both RVL-CDIP columns are
-floors - see [RVL-CDIP grounding is a floor](#rvl-cdip-grounding-is-a-floor).
-
-**The cost column.** The baseline's is measured tokens x published prices. The adapter's is
-a rented T4 at $0.35/hour over measured throughput, at an assumed 100% utilisation.
-Break-even against the baseline is ~3.3% utilisation. On owned hardware (a ~$300 consumer
-card, amortised, plus power) the floor is roughly $0.02 per 1,000, with the machine still to
-be kept up, reachable and maintained.
-
-The gap comes from prompt size: the baseline sends **4,444 input tokens per invoice** (the
-schema and the worked example, re-sent every call) against the adapter's **666**, which
-carries the schema in its weights. On RVL-CDIP the baseline also spent 4,084 output tokens
-per document against 153, which is the 90x gap on real scans.
-
-**Latency is not comparable across conditions.** The baseline ran at 4 concurrent requests
-against a remote API, the adapter at 16 against one local GPU where per-request latency
-rises with batch load by design (p50 26s, p95 34s on `test_unseen`). Throughput is the
-meaningful self-hosted number.
-
-### What the held-out run showed
+| Prompted frontier (Gemini 3.8 Flash) | seen layouts | 350 | 100.0% | 99.0% | 90.9% | $4.86 | - |
+| Prompted frontier (Gemini 3.8 Flash) | **unseen** layouts | 300 | 99.3% | 98.9% | **95.0%** | $4.95 | - |
+| Tuned adapter (Qwen2.5-VL-3B, r=16) | seen layouts | 350 | 99.4% | 97.8% | 83.7% | $0.16 | 2,211/h |
+| Tuned adapter (Qwen2.5-VL-3B, r=16) | **unseen** layouts | 300 | 100.0% | 96.2% | 65.0% | **$0.17** | 2,118/h |
 
 **Seen against unseen layouts.** The adapter loses 1.6 points of field accuracy and 18.7
 points of exact match moving from trained layouts to unseen ones (97.8% -> 96.2%, 83.7% ->
@@ -94,9 +70,37 @@ against 52.5%, `tax` 99.4% against 94.1% on seen layouts. Which printed figure c
 amount due, and whether a VAT or GST line is the tax, are what supervised labels transmit
 and a prompt has to guess.
 
-**The synthetic-to-real gap is a schema gap.** Both conditions drop on RVL-CDIP (98.9% ->
-50.4% for the baseline). The adapter's 84 invalid outputs are structural drift rather than
-garbled text:
+**The cost column.** The baseline's is measured tokens x published prices. The adapter's is
+a rented T4 at $0.35/hour over measured throughput, at an assumed 100% utilisation.
+Break-even against the baseline is ~3.3% utilisation. On owned hardware (a ~$300 consumer
+card, amortised, plus power) the floor is roughly $0.02 per 1,000, with the machine still to
+be kept up, reachable and maintained.
+
+The gap comes from prompt size: the baseline sends **4,444 input tokens per invoice** (the
+schema and the worked example, re-sent every call) against the adapter's **666**, which
+carries the schema in its weights.
+
+**Latency is not comparable across conditions.** The baseline ran at 4 concurrent requests
+against a remote API, the adapter at 16 against one local GPU where per-request latency
+rises with batch load by design (p50 26s, p95 34s on `test_unseen`). Throughput is the
+meaningful self-hosted number.
+
+### Real scans: the schema-compliance check
+
+FATURA is synthetic, so a zero-shot pass over 433 real scanned invoices (RVL-CDIP) is the
+only evidence here about documents outside that distribution. It answers one question
+cleanly and one only partially.
+
+**Cleanly: does the output still satisfy the schema?** This is read off the model's own
+output and needs no ground truth.
+
+| Condition | Schema validity | Invalid outputs | Cost / 1k |
+|---|---|---|---|
+| Prompted frontier | **99.5%** | 2 / 433 | $18.65 |
+| Tuned adapter | **80.6%** | 79 / 433 | $0.21 |
+
+That gap is the single biggest input to the recommendation. The adapter's invalid outputs
+are structural drift rather than garbled text:
 
 | Failure | Documents | What happened |
 |---|---|---|
@@ -105,15 +109,31 @@ garbled text:
 | malformed JSON | 7 | a missing quote or brace, on the noisiest scans |
 | `buyer.address` missing | 5 | a required key omitted rather than nulled |
 
-### RVL-CDIP grounding is a floor
+Each of those is a decoding-time constraint away from being impossible, which is why
+constrained decoding is the named next experiment rather than more training data.
 
-RVL-CDIP has no field values. A prediction is scored by whether it appears inside the right
-annotated region of an ABBYY OCR pass over 1970s-90s microfilm, **median per-word confidence
-0.51**. Where the OCR is wrong, a correct answer scores wrong.
+The baseline's output-token cost is the other real-scan finding: 4,084 output tokens per
+document against the adapter's 153, which is where the 90x cost gap comes from.
 
-[`eval/agreement.py`](eval/agreement.py) bounds that using the two conditions as independent
-witnesses: field instances where both produced an identical value and both were marked wrong.
-Two different models agreeing character for character is unlikely to be a shared hallucination.
+**Partially: how much did each model actually read?** RVL-CDIP has no field values, only
+region boxes over an ABBYY OCR pass of 1970s-90s microfilm at **median per-word confidence
+0.51**, so a correct answer scores wrong wherever the OCR is. The metric is containment
+inside the right region, it is a **floor rather than an accuracy estimate**, and it is worth
+reading only between conditions, which face identical ground truth:
+
+| Condition | Grounding, valid outputs only | Grounding, all outputs |
+|---|---|---|
+| Prompted frontier | 54.8% | 54.4% |
+| Tuned adapter | **56.4%** | 43.4% |
+
+Restricted to outputs that validate, the adapter grounds marginally better than the
+baseline. Its deficit on real scans is the envelope, not the reading. Neither number should
+be read as "the model got half the fields right".
+
+[`eval/agreement.py`](eval/agreement.py) bounds the OCR damage using the two conditions as
+independent witnesses: field instances where both produced an identical value and both were
+marked wrong. Two models agreeing character for character is unlikely to be a shared
+hallucination.
 
 ```
 1,313 field instances where both conditions returned the same value
@@ -125,22 +145,16 @@ Of the ones scored wrong:
    90 (20.3%)  value present, heavier OCR damage
 ```
 
-At least **250 of those 444** have the agreed value sitting in the region in damaged form:
-
-| Both models answered | Region OCR says |
-|---|---|
-| `PHILIP MORRIS INCORP.` | `To PHII IP MORRIS INCORP. 120 PARK AVENUE` |
-| `2001-10-19` | `InvoJco Number: 59276-1 Dafo: October 19. 9001` |
-| `1991-06-13` | `PURCHASE ORDER NO. DATE 1470 06 13 j 91 TERMS` |
-
-The remaining 44% is ambiguous: the OCR pass routinely drops letterheads and logos, which is
-where `vendor.name` is printed, and some of it is both models being wrong. The analysis stops
-there rather than crediting itself a corrected score. Region containment compares alphanumeric
-skeletons, so `Philip Morris-USA` matches `Philip Morris -USA`; that leniency is confined to
-RVL-CDIP, and FATURA, which has real field values, is compared strictly.
+So at least **250 of those 444** have the agreed value in the region in damaged form
+(`PHILIP MORRIS INCORP.` against region text `To PHII IP MORRIS INCORP. 120 PARK AVENUE`;
+`1991-06-13` against `PURCHASE ORDER NO. DATE 1470 06 13 j 91 TERMS`). The remaining 44% is
+ambiguous: the OCR pass routinely drops letterheads and logos, which is where `vendor.name`
+is printed, and some of it is both models being wrong. The analysis stops there rather than
+crediting itself a corrected score. Region containment compares alphanumeric skeletons, so
+`Philip Morris-USA` matches `Philip Morris -USA`; that leniency is confined to RVL-CDIP, and
+FATURA, which has real field values, is compared strictly.
 
 ---
-
 ## Running it
 
 ```bash
