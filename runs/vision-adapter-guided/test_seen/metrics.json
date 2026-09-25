@@ -1,0 +1,198 @@
+{
+ "condition": "vision-adapter-guided",
+ "eval_set": "test_seen",
+ "model": "slotfill-lora",
+ "n_documents": 350,
+ "n_predicted": 350,
+ "n_errors": 0,
+ "n_valid": 350,
+ "validity_rate": 1.0,
+ "field_accuracy_all": 0.9841317365269461,
+ "field_accuracy_valid": 0.9841317365269461,
+ "exact_match_all": 0.8485714285714285,
+ "exact_match_valid": 0.8485714285714285,
+ "abstain_rate": 0.0,
+ "per_field": {
+  "invoice_number": {
+   "scoreable": 310,
+   "correct": 307,
+   "wrong": 3,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 0.9903225806451613,
+   "accuracy_valid": 0.9903225806451613
+  },
+  "purchase_order_number": {
+   "scoreable": 50,
+   "correct": 50,
+   "wrong": 0,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 1.0,
+   "accuracy_valid": 1.0
+  },
+  "invoice_date": {
+   "scoreable": 340,
+   "correct": 337,
+   "wrong": 3,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 0.9911764705882353,
+   "accuracy_valid": 0.9911764705882353
+  },
+  "due_date": {
+   "scoreable": 180,
+   "correct": 180,
+   "wrong": 0,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 1.0,
+   "accuracy_valid": 1.0
+  },
+  "vendor.name": {
+   "scoreable": 210,
+   "correct": 210,
+   "wrong": 0,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 1.0,
+   "accuracy_valid": 1.0
+  },
+  "vendor.address": {
+   "scoreable": 270,
+   "correct": 270,
+   "wrong": 0,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 1.0,
+   "accuracy_valid": 1.0
+  },
+  "vendor.email": {
+   "scoreable": 160,
+   "correct": 160,
+   "wrong": 0,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 1.0,
+   "accuracy_valid": 1.0
+  },
+  "vendor.website": {
+   "scoreable": 60,
+   "correct": 60,
+   "wrong": 0,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 1.0,
+   "accuracy_valid": 1.0
+  },
+  "buyer.name": {
+   "scoreable": 310,
+   "correct": 306,
+   "wrong": 4,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 0.9870967741935484,
+   "accuracy_valid": 0.9870967741935484
+  },
+  "buyer.address": {
+   "scoreable": 310,
+   "correct": 269,
+   "wrong": 41,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 0.867741935483871,
+   "accuracy_valid": 0.867741935483871
+  },
+  "currency": {
+   "scoreable": 320,
+   "correct": 320,
+   "wrong": 0,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 1.0,
+   "accuracy_valid": 1.0
+  },
+  "subtotal": {
+   "scoreable": 230,
+   "correct": 229,
+   "wrong": 1,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 0.9956521739130435,
+   "accuracy_valid": 0.9956521739130435
+  },
+  "discount": {
+   "scoreable": 60,
+   "correct": 60,
+   "wrong": 0,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 1.0,
+   "accuracy_valid": 1.0
+  },
+  "tax": {
+   "scoreable": 170,
+   "correct": 169,
+   "wrong": 1,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 0.9941176470588236,
+   "accuracy_valid": 0.9941176470588236
+  },
+  "total_amount": {
+   "scoreable": 270,
+   "correct": 270,
+   "wrong": 0,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 1.0,
+   "accuracy_valid": 1.0
+  },
+  "amount_due": {
+   "scoreable": 40,
+   "correct": 40,
+   "wrong": 0,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 1.0,
+   "accuracy_valid": 1.0
+  },
+  "payment_terms": {
+   "scoreable": 50,
+   "correct": 50,
+   "wrong": 0,
+   "invalid": 0,
+   "abstained": 0,
+   "accuracy_all": 1.0,
+   "accuracy_valid": 1.0
+  }
+ },
+ "latency_p50_s": 25.803714983999953,
+ "latency_p95_s": 29.95051250100005,
+ "mean_input_tokens": 666.0,
+ "mean_output_tokens": 164.01142857142858,
+ "mean_cache_read_tokens": 0.0,
+ "cost_per_1k_usd": 0.15883656222472226,
+ "gpu_wall_clock_s": 571.8116240090001,
+ "throughput_docs_per_hour": 2203.522886026829,
+ "text_layer_ceiling": null,
+ "truncated_outputs": 0,
+ "config": {
+  "condition": "vision-adapter-guided",
+  "eval_set": "test_seen",
+  "input_kind": "image",
+  "backend": "openai",
+  "model": "slotfill-lora",
+  "prompt_digest": "980618c16832d5469a2c3a1d8df3e4846fc7a47cbafbb9db60e785f4c8a6d257",
+  "with_example": false,
+  "with_schema": false,
+  "effort": null,
+  "max_tokens": 1024,
+  "excluded_fields": [],
+  "guided_json": true,
+  "limit": null,
+  "started_at": "2026-09-25T15:50:48+00:00",
+  "git_commit": "ed2dfd0",
+  "schema_digest": "fa19462a26b7012875fc8f7fd4d5f1776c34b0e33147d257b1ef4d24c2776670"
+ }
+}
