@@ -9,39 +9,50 @@ neither condition was iterated against.
 
 **Ship the prompt. Keep the adapter for high-volume batch work on clean documents.**
 
-The tuned adapter lands within **2.6 points of field accuracy** of the prompted frontier
-model on invoice layouts neither has seen, at **1/30th the cost**, and at **1/90th** on real
-scans where the frontier model spends ten times its usual output budget. It falls short on
-the two properties an accounting import depends on:
+The tuned adapter, decoded under a schema constraint, lands within **2.6 points of field
+accuracy** of the prompted frontier model on invoice layouts neither has seen, at **1/30th
+the cost**, and within **1.1 points of grounding** on real scans at **1/90th**. One property
+an accounting import depends on still separates them:
 
-- **Whole-record correctness.** 96.2% of fields correct against 98.9% is close; per-document
-  perfection over ~12 fields is not. Exact match is **65% against 95%** on unseen layouts,
-  so one extracted invoice in three needs a human, against one in twenty. The misses are
-  character-level misreads of long unpredictable strings (`3934 Gonzales Loop` as
-  `9394 Gonzales Loop`, `Scottland` as `Scotland`), which is reading resolution rather than
-  a labelling defect.
-- **Schema compliance on real documents.** Zero-shot on real scans the adapter returns
-  **80.6% valid JSON against 99.5%**, so nearly one real invoice in five comes back as a
-  structured error. Restricted to outputs that do validate, it reads those scans as well as
-  the baseline, so the deficit is the envelope rather than the reading.
+- **Whole-record correctness.** 96.3% of fields correct against 98.9% is close; per-document
+  perfection over ~12 fields is not. Exact match is **65.3% against 95.0%** on unseen
+  layouts, so one extracted invoice in three needs a human, against one in twenty. The
+  misses are character-level misreads of long unpredictable strings (`3934 Gonzales Loop`
+  as `9394 Gonzales Loop`, `Scottland` as `Scotland`), which is reading resolution rather
+  than a labelling defect.
+
+**Schema compliance used to be the second reason and no longer is.** Unconstrained, the
+adapter returned 80.6% valid JSON on real scans against the baseline's 99.5%, and nearly one
+real invoice in five came back as a structured error. Constraining the decoder to the schema
+takes that to **99.8%**, one invalid output in 433, and lifts grounding from 43.4% to 53.3%
+against the baseline's 54.4%. It costs nothing measurable: throughput moves from 1,683 to
+1,707 documents per hour.
+
+The same constraint does almost nothing on FATURA, where exact match moves 65.0% to 65.3%.
+That is the shape of the result. A grammar repairs structure, those pages had almost none
+broken, and misread characters are not a structural problem.
 
 The cost figure is a floor rather than a forecast: $0.17 per 1,000 assumes the rented GPU is
 busy every second. Break-even against the API sits near **70 invoices per hour sustained**,
 and below that an idle GPU makes the prompt cheaper as well as more accurate.
 
 The adapter wins on high-volume batch extraction over clean, template-like documents near
-its training distribution, where 97.8% field accuracy on seen layouts and a 30-90x cost
-advantage decide it and a 1-in-6 whole-record miss rate is tolerable because the work is
-queued rather than interactive.
+its training distribution, where 98.4% field accuracy on seen layouts and a 30-90x cost
+advantage decide it and a 1-in-7 whole-record miss rate is tolerable because the work is
+queued rather than interactive. Run it behind the grammar: it costs nothing and it is the
+difference between a bad record and an unparseable one.
 
 One thing the fine-tune does unambiguously well is not accuracy: it absorbs the dataset's
 labelling conventions. On `amount_due` it scores 100% against the baseline's 52.5%, because
 which printed figure counts as the amount due is teachable but hard to prompt.
 
-**Untested lever: constrained decoding.** The RVL-CDIP failures are structural drift (the
-model invents `buyer.email` or `buyer.city`, or emits `"DM"` where the schema wants ISO
-4217), not garbled text, and a grammar-constrained decoder at the serving layer rules out
-that class by construction. No measurement of it exists here, so it is not claimed.
+**What the constraint costs, and it is not nothing.** `currency` is held by the regex
+`^[A-Z]{3}$` rather than a list of real ISO 4217 codes. Unconstrained, a 1990s German
+invoice produced `"DM"` and the schema rejected it. Constrained, the model cannot write two
+letters, so ten documents now carry `DMR`, `DMP` or `DOL` and validate cleanly. Structured
+errors that announced themselves became plausible wrong answers that do not. Tightening the
+field to an enum would close it, at the cost of moving the schema digest for every recorded
+run.
 
 ## Results
 
@@ -54,6 +65,13 @@ invalid output counts wrong on every field.
 | Prompted frontier (Gemini 3.8 Flash) | **unseen** layouts | 300 | 99.3% | 98.9% | **95.0%** | $4.95 | - |
 | Tuned adapter (Qwen2.5-VL-3B, r=16) | seen layouts | 350 | 99.4% | 97.8% | 83.7% | $0.16 | 2,211/h |
 | Tuned adapter (Qwen2.5-VL-3B, r=16) | **unseen** layouts | 300 | 100.0% | 96.2% | 65.0% | **$0.17** | 2,118/h |
+| Adapter, schema-constrained | seen layouts | 350 | 100.0% | 98.4% | 84.9% | $0.16 | 2,204/h |
+| Adapter, schema-constrained | **unseen** layouts | 300 | 100.0% | 96.3% | 65.3% | **$0.17** | 2,103/h |
+
+The constrained rows use the identical adapter weights and prompt. The only difference is
+that vLLM decoded against the schema, masking tokens that would break it. Validity under
+that setting describes the decoder rather than the model, and `eval/evaluate.py` prints that
+caveat beside the row.
 
 **Seen against unseen layouts.** The adapter loses 1.6 points of field accuracy and 18.7
 points of exact match moving from trained layouts to unseen ones (97.8% -> 96.2%, 83.7% ->
@@ -97,10 +115,12 @@ output and needs no ground truth.
 | Condition | Schema validity | Invalid outputs | Cost / 1k |
 |---|---|---|---|
 | Prompted frontier | **99.5%** | 2 / 433 | $18.65 |
-| Tuned adapter | **80.6%** | 79 / 433 | $0.21 |
+| Tuned adapter | **80.6%** | 84 / 433 | $0.21 |
+| Adapter, schema-constrained | **99.8%** | 1 / 433 | $0.21 |
 
-That gap is the single biggest input to the recommendation. The adapter's invalid outputs
-are structural drift rather than garbled text:
+Unconstrained, this gap was the single biggest input to the recommendation. The invalid
+outputs were structural drift rather than garbled text, which is why a decoding constraint
+removes them:
 
 | Failure | Documents | What happened |
 |---|---|---|
@@ -109,8 +129,14 @@ are structural drift rather than garbled text:
 | malformed JSON | 7 | a missing quote or brace, on the noisiest scans |
 | `buyer.address` missing | 5 | a required key omitted rather than nulled |
 
-Each of those is a decoding-time constraint away from being impossible, which is why
-constrained decoding is the named next experiment rather than more training data.
+Every one of those classes is gone under the constraint. The single output that still fails
+is `due_date: "1991-11-31"`: a grammar holds the date shape and cannot know November has 30
+days.
+
+What the constraint does not fix is the `currency` class, because `^[A-Z]{3}$` is a regex
+and not a list of real codes. The nine `"DM"` rejections became ten documents carrying
+`DMR`, `DMP` or `DOL`, which validate. The error did not go away; it stopped announcing
+itself.
 
 The baseline's output-token cost is the other real-scan finding: 4,084 output tokens per
 document against the adapter's 153, which is where the 90x cost gap comes from.
@@ -121,13 +147,21 @@ region boxes over an ABBYY OCR pass of 1970s-90s microfilm at **median per-word 
 inside the right region, it is a **floor rather than an accuracy estimate**, and it is worth
 reading only between conditions, which face identical ground truth:
 
-| Condition | Grounding, valid outputs only | Grounding, all outputs |
-|---|---|---|
-| Prompted frontier | 54.8% | 54.4% |
-| Tuned adapter | **56.4%** | 43.4% |
+| Condition | Grounding, valid outputs only | Grounding, all outputs | Abstained |
+|---|---|---|---|
+| Prompted frontier | 54.8% | 54.4% | 20.7% |
+| Tuned adapter | **56.4%** | 43.4% | 16.7% |
+| Adapter, schema-constrained | 53.5% | **53.3%** | 21.9% |
 
-Restricted to outputs that validate, the adapter grounds marginally better than the
-baseline. Its deficit on real scans is the envelope, not the reading. Neither number should
+Restricted to outputs that validate, the unconstrained adapter grounds marginally better
+than the baseline: its deficit on real scans was the envelope, not the reading. Constraining
+the decoder closes the all-outputs gap to 1.1 points.
+
+Two things keep that from being a pure reading gain. The valid-outputs column **falls**,
+56.4% to 53.5%, because the valid set previously excluded the 84 documents the model drifted
+on and now contains them; that is a selection effect rather than worse reading. And
+abstentions rise from 16.7% to 21.9%, so part of the ten-point gain is the model returning
+`null` where it used to drift. The two effects are not separated here. Neither number should
 be read as "the model got half the fields right".
 
 [`eval/agreement.py`](eval/agreement.py) bounds the OCR damage using the two conditions as
@@ -290,8 +324,9 @@ Schema validity under this setting describes the decoder rather than the model, 
 
 The schema travels as the OpenAI `response_format`, a named parameter an endpoint either
 honours or rejects. Nothing in a response confirms a constraint was applied, so the flag
-records a request rather than a fact. The evidence is the output: under a working constraint no invalid output can be
-emitted, so `eval/evaluate.py` reports any invalid output that was neither truncated nor a
+records a request rather than a fact. The evidence is the output: under a working
+constraint no invalid output can be emitted, so `eval/evaluate.py` reports any invalid
+output that was neither truncated nor a
 request error as the server having ignored the constraint, and says the run is not
 schema-constrained. `GUIDED_DECODING_BACKEND` on the serve script pins which implementation
 vLLM uses, which matters because `currency` is constrained by a regex (`^[A-Z]{3}$`) rather
@@ -521,10 +556,14 @@ tests/                                        schema, mappers, split, scorer, ha
 - The adapter's headline weakness is **character-level transcription**, and more FATURA would
   not fix it: the misread strings are randomly generated place names no model can infer from
   context. A larger base model or a higher-resolution vision path is the lever.
-- **Constrained decoding is unmeasured.** The RVL-CDIP validity gap (80.6% against 99.5%) is
-  the single biggest input to the recommendation and is plausibly an artefact of
-  unconstrained generation rather than of the model, so the recommendation for real scans is
-  provisional until that is measured.
+- **Constrained decoding trades a loud failure for a quiet one on `currency`.** The field is
+  held by `^[A-Z]{3}$`, not by a list of real ISO 4217 codes, so ten documents that used to
+  be rejected for saying `"DM"` now validate while carrying `DMR`, `DMP` or `DOL`. An enum
+  would close it, at the cost of moving `schema_digest` for every recorded run and
+  `prompt_digest` for the frontier baseline, whose prompt embeds the schema text.
+- **The grounding gain under constraint is not cleanly attributable.** Abstentions rise from
+  16.7% to 21.9% at the same time, and abstentions leave the denominator, so an unknown part
+  of the gain is the model declining rather than reading.
 - **Latency is not comparable across conditions** as measured; only throughput is.
 - Training data is **synthetic**. FATURA's content is generated, its layouts are clean, and
   its dates are internally inconsistent (due dates frequently precede invoice dates).
