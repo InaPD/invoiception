@@ -221,16 +221,24 @@ def test_anthropic_omits_an_empty_system_prompt():
     assert "system" not in fake.calls[0]
 
 
-def test_openai_compatible_sends_no_extra_body_when_unconstrained():
+def test_openai_compatible_sends_no_response_format_when_unconstrained():
     """An unconstrained request must stay byte-identical to what the committed runs sent,
     so turning the feature on cannot quietly re-shape every other condition."""
     kwargs = OpenAICompatibleBackend("adapter", client=_FakeOpenAI(None)).build_kwargs(REQUEST)
+    assert "response_format" not in kwargs
     assert "extra_body" not in kwargs
 
 
-def test_openai_compatible_passes_the_schema_as_guided_json():
+def test_openai_compatible_sends_the_schema_as_a_named_response_format():
+    """`response_format` is a named OpenAI parameter, so an endpoint that cannot honour it
+    rejects the request. vLLM 0.30 dropped the older `guided_json` extra_body key and
+    ignored it in silence, which decodes unconstrained under a config claiming otherwise."""
     schema = {"type": "object", "properties": {"total": {"type": "number"}}}
     backend = OpenAICompatibleBackend("adapter", client=_FakeOpenAI(None), guided_json=schema)
     kwargs = backend.build_kwargs(REQUEST)
-    assert kwargs["extra_body"] == {"guided_json": schema}
+    assert kwargs["response_format"] == {
+        "type": "json_schema",
+        "json_schema": {"name": "invoice_record", "schema": schema, "strict": True},
+    }
+    assert "extra_body" not in kwargs
     assert kwargs["temperature"] == 0

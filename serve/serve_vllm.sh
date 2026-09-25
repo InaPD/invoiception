@@ -12,10 +12,12 @@
 # ...so baseline and adapter are benchmarked through identical code, which is the point.
 # `eval/predict.py --backend openai --base-url http://localhost:8000/v1` talks to it.
 #
-# This server also accepts `guided_json` in a request body, which constrains decoding to a
-# JSON schema: tokens that would break it are masked before sampling, so the reply cannot
-# be invalid. `eval/predict.py --guided-json` sends the project schema that way. No launch
-# flag is needed for it; GUIDED_DECODING_BACKEND below only picks the implementation.
+# This server also accepts `response_format` with a `json_schema` block, which constrains
+# decoding to that schema: tokens that would break it are masked before sampling, so the
+# reply cannot be invalid. `eval/predict.py --guided-json` sends the project schema that
+# way. No launch flag is needed for it; GUIDED_DECODING_BACKEND below only picks the
+# implementation. vLLM 0.30 also accepts `structured_outputs`, and dropped the older
+# `guided_json` extra_body key, which it now ignores without erroring.
 #
 # Notes that cost real time to rediscover:
 #
