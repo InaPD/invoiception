@@ -56,17 +56,41 @@ run.
 
 ## Results
 
-Measured on the frozen FATURA held-out sets. Field accuracy is the **all-outputs** view: an
-invalid output counts wrong on every field.
+Measured on the frozen FATURA held-out sets. The two tables below count different things,
+and the difference between them is the whole result, so they are kept apart.
 
-| Condition | Eval set | n | Schema validity | Field accuracy | Exact match | Cost / 1k | Throughput |
-|---|---|---|---|---|---|---|---|
-| Prompted frontier (Gemini 3.8 Flash) | seen layouts | 350 | 100.0% | 99.0% | 90.9% | $4.86 | - |
-| Prompted frontier (Gemini 3.8 Flash) | **unseen** layouts | 300 | 99.3% | 98.9% | **95.0%** | $4.95 | - |
-| Tuned adapter (Qwen2.5-VL-3B, r=16) | seen layouts | 350 | 99.4% | 97.8% | 83.7% | $0.16 | 2,211/h |
-| Tuned adapter (Qwen2.5-VL-3B, r=16) | **unseen** layouts | 300 | 100.0% | 96.2% | 65.0% | **$0.17** | 2,118/h |
-| Adapter, schema-constrained | seen layouts | 350 | 100.0% | 98.4% | 84.9% | $0.16 | 2,204/h |
-| Adapter, schema-constrained | **unseen** layouts | 300 | 100.0% | 96.3% | 65.3% | **$0.17** | 2,103/h |
+### Per field: how much of the content is read correctly
+
+One field at a time, across every document. This is the **all-outputs** view: an invalid
+output counts wrong on every field.
+
+| Condition | seen layouts (n=350) | **unseen** layouts (n=300) |
+|---|---|---|
+| Prompted frontier (Gemini 3.8 Flash) | 99.0% | **98.9%** |
+| Tuned adapter (Qwen2.5-VL-3B, r=16) | 97.8% | 96.2% |
+| Adapter, schema-constrained | 98.4% | 96.3% |
+
+### Per document: how many invoices come out usable
+
+One invoice at a time. **Exact match** counts a document only when every scoreable field is
+right, so it is the number that decides how much human work an extraction run creates.
+
+| Condition | Eval set | Schema validity | Exact match | Cost / 1k | Throughput |
+|---|---|---|---|---|---|
+| Prompted frontier (Gemini 3.8 Flash) | seen layouts | 100.0% | 90.9% | $4.86 | - |
+| Prompted frontier (Gemini 3.8 Flash) | **unseen** layouts | 99.3% | **95.0%** | $4.95 | - |
+| Tuned adapter (Qwen2.5-VL-3B, r=16) | seen layouts | 99.4% | 83.7% | $0.16 | 2,211/h |
+| Tuned adapter (Qwen2.5-VL-3B, r=16) | **unseen** layouts | 100.0% | 65.0% | **$0.17** | 2,118/h |
+| Adapter, schema-constrained | seen layouts | 100.0% | 84.9% | $0.16 | 2,204/h |
+| Adapter, schema-constrained | **unseen** layouts | 100.0% | 65.3% | **$0.17** | 2,103/h |
+
+**Why the two tables disagree so sharply.** A record carries about twelve scoreable fields,
+and a document is exact-matched only when all of them are right. Per-field errors therefore
+compound: the adapter's 96.3% of fields correct on unseen layouts yields 65.3% of perfect
+records, while the baseline's 98.9% yields 95.0%. A 2.6 point gap per field becomes a 29.7
+point gap per document. Reading only the first table makes the two look close; the second is
+what an accounting import actually experiences, which is one invoice in three needing a
+human against one in twenty.
 
 The constrained rows use the identical adapter weights and prompt. The only difference is
 that vLLM decoded against the schema, masking tokens that would break it. Validity under
@@ -289,7 +313,7 @@ served is not a result.
 
 Adapter weights are not committed. `run_config.json`, `smoke.json` and `train_log.json` are,
 under `runs/train/<adapter>/`. The digest chain runs `bundle.json` -> `run_config.json` ->
-the held-out run's own config, so a number in the results table traces back to the documents
+the held-out run's own config, so a number in the results tables traces back to the documents
 it was trained on.
 
 ### Evaluating the adapter
@@ -568,7 +592,7 @@ tests/                                        schema, mappers, split, scorer, ha
 - Training data is **synthetic**. FATURA's content is generated, its layouts are clean, and
   its dates are internally inconsistent (due dates frequently precede invoice dates).
 - The RVL-CDIP grounding numbers are **floors, not accuracy estimates**. They are comparable
-  between conditions, which is what the results table uses them for, and should not be read
+  between conditions, which is what the tables use them for, and should not be read
   as "the model got half the fields right".
 - The real-document test set is **433 scans of one narrow domain** (tobacco litigation
   archives), with poor OCR, scoring grounding only.
