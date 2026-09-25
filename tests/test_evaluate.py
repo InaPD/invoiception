@@ -289,3 +289,68 @@ def test_a_priced_api_model_ignores_the_gpu_rate():
         usd_per_hour=0.35,
     )
     assert m.cost_per_1k_usd == pytest.approx(1.5)
+
+
+def test_a_constrained_run_says_its_validity_is_not_a_measurement(tmp_path, monkeypatch, capsys):
+    """100% validity under guided decoding is the grammar, not the model. A reader of the
+    table row has to be told which of the two produced the number."""
+    from eval import evaluate, predict
+
+    items = [_item("a")]
+    monkeypatch.setattr(evaluate, "load_eval_set", lambda name: items)
+    run_dir = tmp_path / "c" / "dev_unseen"
+    run_dir.mkdir(parents=True)
+    (run_dir / predict.CONFIG_FILE).write_text(_config(guided_json=True).to_json())
+    (run_dir / predict.PREDICTIONS_FILE).write_text(_prediction("a", _record()).to_json() + "\n")
+
+    evaluate.main([str(run_dir)])
+    out = capsys.readouterr().out
+    assert "schema-constrained decoding: validity is not a model measurement" in out
+    metrics = json.loads((run_dir / evaluate.METRICS_FILE).read_text())
+    assert metrics["config"]["guided_json"] is True
+
+
+def test_an_ignored_constraint_is_reported_rather_than_trusted(tmp_path, monkeypatch, capsys):
+    """`guided_json` records a request, not a confirmation: a hosted endpoint accepts the
+    field and ignores it. An invalid output that was neither truncated nor an error is the
+    only evidence available that the constraint never reached the sampler."""
+    from eval import evaluate, predict
+
+    items = [_item("a"), _item("b")]
+    monkeypatch.setattr(evaluate, "load_eval_set", lambda name: items)
+    run_dir = tmp_path / "c" / "dev_unseen"
+    run_dir.mkdir(parents=True)
+    (run_dir / predict.CONFIG_FILE).write_text(_config(guided_json=True).to_json())
+    (run_dir / predict.PREDICTIONS_FILE).write_text(
+        _prediction("a", _record()).to_json()
+        + "\n"
+        + Prediction("b", "dev_unseen", "c", "m", "not json at all").to_json()
+        + "\n"
+    )
+
+    evaluate.main([str(run_dir)])
+    out = capsys.readouterr().out
+    assert "1 invalid outputs under a requested constraint" in out
+    assert "the server did not apply it" in out
+
+
+def test_a_truncated_output_is_not_blamed_on_the_constraint(tmp_path, monkeypatch, capsys):
+    """A grammar cannot stop max_tokens cutting a reply in half, so truncation is not
+    evidence that the constraint was ignored."""
+    from eval import evaluate, predict
+
+    items = [_item("a")]
+    monkeypatch.setattr(evaluate, "load_eval_set", lambda name: items)
+    run_dir = tmp_path / "c" / "dev_unseen"
+    run_dir.mkdir(parents=True)
+    (run_dir / predict.CONFIG_FILE).write_text(_config(guided_json=True).to_json())
+    (run_dir / predict.PREDICTIONS_FILE).write_text(
+        Prediction("a", "dev_unseen", "c", "m", '{"invoice_number"', stop_reason="max_tokens")
+        .to_json()
+        + "\n"
+    )
+
+    evaluate.main([str(run_dir)])
+    out = capsys.readouterr().out
+    assert "did not apply it" not in out
+    assert "1 outputs truncated" in out

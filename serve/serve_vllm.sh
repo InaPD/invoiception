@@ -12,6 +12,11 @@
 # ...so baseline and adapter are benchmarked through identical code, which is the point.
 # `eval/predict.py --backend openai --base-url http://localhost:8000/v1` talks to it.
 #
+# This server also accepts `guided_json` in a request body, which constrains decoding to a
+# JSON schema: tokens that would break it are masked before sampling, so the reply cannot
+# be invalid. `eval/predict.py --guided-json` sends the project schema that way. No launch
+# flag is needed for it; GUIDED_DECODING_BACKEND below only picks the implementation.
+#
 # Notes that cost real time to rediscover:
 #
 # * vLLM applies LoRA to the language model only for Qwen2.5-VL; weights in the vision
@@ -44,6 +49,10 @@ MAX_MODEL_LEN="${MAX_MODEL_LEN:-4096}"
 MAX_LORA_RANK="${MAX_LORA_RANK:-16}"
 GPU_MEMORY_UTILIZATION="${GPU_MEMORY_UTILIZATION:-0.90}"
 MAX_NUM_SEQS="${MAX_NUM_SEQS:-16}"
+# Unset by default, which leaves vLLM on whichever guided-decoding backend its version
+# defaults to. Set it (xgrammar, outlines, lm-format-enforcer) to pin one; an unsupported
+# name here refuses to start rather than silently decoding unconstrained.
+GUIDED_DECODING_BACKEND="${GUIDED_DECODING_BACKEND:-}"
 
 echo "serving $BASE_MODEL + $ADAPTER_NAME=$ADAPTER_PATH on :$PORT (dtype $DTYPE)"
 
@@ -59,4 +68,5 @@ exec python -m vllm.entrypoints.openai.api_server \
   --gpu-memory-utilization "$GPU_MEMORY_UTILIZATION" \
   --limit-mm-per-prompt '{"image":1}' \
   --port "$PORT" \
+  ${GUIDED_DECODING_BACKEND:+--guided-decoding-backend "$GUIDED_DECODING_BACKEND"} \
   "${@:2}"

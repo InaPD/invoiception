@@ -219,3 +219,18 @@ def test_anthropic_omits_an_empty_system_prompt():
     fake = _FakeAnthropic(_anthropic_response())
     AnthropicBackend("claude", client=fake).complete(MINIMAL_REQUEST)
     assert "system" not in fake.calls[0]
+
+
+def test_openai_compatible_sends_no_extra_body_when_unconstrained():
+    """An unconstrained request must stay byte-identical to what the committed runs sent,
+    so turning the feature on cannot quietly re-shape every other condition."""
+    kwargs = OpenAICompatibleBackend("adapter", client=_FakeOpenAI(None)).build_kwargs(REQUEST)
+    assert "extra_body" not in kwargs
+
+
+def test_openai_compatible_passes_the_schema_as_guided_json():
+    schema = {"type": "object", "properties": {"total": {"type": "number"}}}
+    backend = OpenAICompatibleBackend("adapter", client=_FakeOpenAI(None), guided_json=schema)
+    kwargs = backend.build_kwargs(REQUEST)
+    assert kwargs["extra_body"] == {"guided_json": schema}
+    assert kwargs["temperature"] == 0

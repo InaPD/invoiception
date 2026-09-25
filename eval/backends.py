@@ -6,7 +6,9 @@ whichever backend answers, so conditions are compared on the model and nothing e
 * `AnthropicBackend`         - the official SDK; the prompted frontier baseline and the
                                Path A small-model pre-check.
 * `OpenAICompatibleBackend`  - any `/v1/chat/completions` server, which is how the tuned
-                               adapter is served (vLLM with `--enable-lora`) in phase 5.
+                               adapter is served (vLLM with `--enable-lora`). It also
+                               carries the optional JSON-schema decoding constraint,
+                               which vLLM applies and hosted APIs ignore.
 
 Every completion records the token counts and the wall-clock latency of the call. Those
 two numbers are the cost and p95 columns of the ship-gate table, so they are measured
@@ -205,8 +207,13 @@ class OpenAICompatibleBackend:
         base_url: str | None = None,
         api_key: str | None = None,
         client: Any = None,
+        guided_json: dict[str, Any] | None = None,
     ) -> None:
         self.model = model
+        # A JSON schema the server must decode against, masking every token that would
+        # break it. vLLM reads `guided_json`; a server without guided decoding ignores
+        # the field, so a run config records whether it was requested.
+        self._guided_json = guided_json
         if client is None:
             import openai
 
@@ -235,12 +242,17 @@ class OpenAICompatibleBackend:
             {"role": message.role, "content": self._parts(message.parts)}
             for message in request.messages
         )
-        return {
+        kwargs: dict[str, Any] = {
             "model": self.model,
             "messages": messages,
             "max_tokens": request.max_tokens,
             "temperature": 0,
         }
+        # Absent unless constrained, so an unconstrained request is exactly what the
+        # earlier runs sent.
+        if self._guided_json is not None:
+            kwargs["extra_body"] = {"guided_json": self._guided_json}
+        return kwargs
 
     def complete(self, request: Request) -> Completion:
         import openai
