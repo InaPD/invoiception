@@ -288,9 +288,9 @@ an identity key, so a constrained run cannot resume or be mixed with an unconstr
 Schema validity under this setting describes the decoder rather than the model, and
 `eval/evaluate.py` prints that caveat beside the row.
 
-Nothing in a response confirms a constraint was applied, and a hosted OpenAI-compatible
-endpoint accepts `guided_json` and ignores it, so the flag records a request rather than a
-fact. The evidence is the output: under a working constraint no invalid output can be
+The schema travels as the OpenAI `response_format`, a named parameter an endpoint either
+honours or rejects. Nothing in a response confirms a constraint was applied, so the flag
+records a request rather than a fact. The evidence is the output: under a working constraint no invalid output can be
 emitted, so `eval/evaluate.py` reports any invalid output that was neither truncated nor a
 request error as the server having ignored the constraint, and says the run is not
 schema-constrained. `GUIDED_DECODING_BACKEND` on the serve script pins which implementation

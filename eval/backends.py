@@ -24,6 +24,8 @@ from typing import Any, Literal, Protocol
 from eval.pages import ImagePart
 
 DEFAULT_MAX_TOKENS = 16_000
+#: `response_format.json_schema` requires a name. It labels the schema and nothing reads it.
+SCHEMA_RESPONSE_NAME = "invoice_record"
 #: Batch eval runs hit rate limits; let the SDK's exponential backoff absorb them.
 DEFAULT_MAX_RETRIES = 5
 
@@ -211,8 +213,11 @@ class OpenAICompatibleBackend:
     ) -> None:
         self.model = model
         # A JSON schema the server must decode against, masking every token that would
-        # break it. vLLM reads `guided_json`; a server without guided decoding ignores
-        # the field, so a run config records whether it was requested.
+        # break it. Sent as the OpenAI `response_format`, which is a named parameter: an
+        # endpoint that cannot honour it rejects the request, where an unknown `extra_body`
+        # key is dropped in silence and decodes unconstrained under a config claiming
+        # otherwise. `eval/evaluate.py` still treats an invalid output under it as proof
+        # the constraint never applied.
         self._guided_json = guided_json
         if client is None:
             import openai
@@ -251,7 +256,14 @@ class OpenAICompatibleBackend:
         # Absent unless constrained, so an unconstrained request is exactly what the
         # earlier runs sent.
         if self._guided_json is not None:
-            kwargs["extra_body"] = {"guided_json": self._guided_json}
+            kwargs["response_format"] = {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": SCHEMA_RESPONSE_NAME,
+                    "schema": self._guided_json,
+                    "strict": True,
+                },
+            }
         return kwargs
 
     def complete(self, request: Request) -> Completion:
